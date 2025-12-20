@@ -58,31 +58,50 @@ def fetch_stock_data(stock_code, period="6mo"):
 def calculate_technical_indicators(df):
     """Calculate technical indicators"""
     if df is None or len(df) < 50:
+        # Add NaN columns for missing indicators
+        df['sma_10'] = np.nan
+        df['sma_50'] = np.nan
+        df['ema_12'] = np.nan
+        df['ema_26'] = np.nan
+        df['rsi'] = 50.0  # Neutral RSI
+        df['macd'] = 0.0
+        df['macd_signal'] = 0.0
+        df['macd_diff'] = 0.0
+        df['bb_upper'] = df['close'] * 1.02
+        df['bb_middle'] = df['close']
+        df['bb_lower'] = df['close'] * 0.98
+        df['atr'] = df['close'] * 0.01
         return df
 
-    # Moving Averages
-    df['sma_10'] = SMAIndicator(df['close'], window=10).sma_indicator()
-    df['sma_50'] = SMAIndicator(df['close'], window=50).sma_indicator()
-    df['ema_12'] = EMAIndicator(df['close'], window=12).ema_indicator()
-    df['ema_26'] = EMAIndicator(df['close'], window=26).ema_indicator()
+    try:
+        # Moving Averages
+        df['sma_10'] = SMAIndicator(df['close'], window=10).sma_indicator()
+        df['sma_50'] = SMAIndicator(df['close'], window=50).sma_indicator()
+        df['ema_12'] = EMAIndicator(df['close'], window=12).ema_indicator()
+        df['ema_26'] = EMAIndicator(df['close'], window=26).ema_indicator()
 
-    # RSI
-    df['rsi'] = RSIIndicator(df['close'], window=14).rsi()
+        # RSI
+        df['rsi'] = RSIIndicator(df['close'], window=14).rsi()
 
-    # MACD
-    macd = MACD(df['close'])
-    df['macd'] = macd.macd()
-    df['macd_signal'] = macd.macd_signal()
-    df['macd_diff'] = macd.macd_diff()
+        # MACD
+        macd = MACD(df['close'])
+        df['macd'] = macd.macd()
+        df['macd_signal'] = macd.macd_signal()
+        df['macd_diff'] = macd.macd_diff()
 
-    # Bollinger Bands
-    bb = BollingerBands(df['close'], window=20, window_dev=2)
-    df['bb_upper'] = bb.bollinger_hband()
-    df['bb_middle'] = bb.bollinger_mavg()
-    df['bb_lower'] = bb.bollinger_lband()
+        # Bollinger Bands
+        bb = BollingerBands(df['close'], window=20, window_dev=2)
+        df['bb_upper'] = bb.bollinger_hband()
+        df['bb_middle'] = bb.bollinger_mavg()
+        df['bb_lower'] = bb.bollinger_lband()
 
-    # ATR
-    df['atr'] = AverageTrueRange(df['high'], df['low'], df['close'], window=14).average_true_range()
+        # ATR
+        df['atr'] = AverageTrueRange(df['high'], df['low'], df['close'], window=14).average_true_range()
+    except Exception as e:
+        st.warning(f"Could not calculate some technical indicators: {e}")
+        # Fill with defaults if calculation fails
+        if 'rsi' not in df.columns:
+            df['rsi'] = 50.0
 
     return df
 
@@ -118,60 +137,64 @@ def generate_mock_predictions(current_price, volatility=0.02):
 
 def generate_trading_signal(df, predictions):
     """Generate trading signal based on technical indicators and predictions"""
-    if df is None or len(df) < 50:
-        return {"signal": "HOLD", "strength": 0, "reasons": ["Insufficient data"]}
+    if df is None or len(df) < 2:
+        return {"signal": "HOLD", "strength": 0, "reasons": ["Insufficient data"], "score": 0}
 
     latest = df.iloc[-1]
     signals = []
     score = 0
     reasons = []
 
-    # RSI signals
-    if latest['rsi'] < 30:
-        score += 2
-        signals.append("BUY")
-        reasons.append("RSI oversold (<30)")
-    elif latest['rsi'] > 70:
-        score -= 2
-        signals.append("SELL")
-        reasons.append("RSI overbought (>70)")
+    # RSI signals (check for valid value)
+    if pd.notna(latest.get('rsi', np.nan)):
+        if latest['rsi'] < 30:
+            score += 2
+            signals.append("BUY")
+            reasons.append("RSI oversold (<30)")
+        elif latest['rsi'] > 70:
+            score -= 2
+            signals.append("SELL")
+            reasons.append("RSI overbought (>70)")
 
-    # MACD signals
-    if latest['macd'] > latest['macd_signal']:
-        score += 1
-        signals.append("BUY")
-        reasons.append("MACD bullish crossover")
-    else:
-        score -= 1
-        signals.append("SELL")
-        reasons.append("MACD bearish crossover")
+    # MACD signals (check for valid values)
+    if pd.notna(latest.get('macd', np.nan)) and pd.notna(latest.get('macd_signal', np.nan)):
+        if latest['macd'] > latest['macd_signal']:
+            score += 1
+            signals.append("BUY")
+            reasons.append("MACD bullish crossover")
+        else:
+            score -= 1
+            signals.append("SELL")
+            reasons.append("MACD bearish crossover")
 
-    # Moving Average signals
-    if latest['close'] > latest['sma_50']:
-        score += 1
-        signals.append("BUY")
-        reasons.append("Price above SMA50")
-    else:
-        score -= 1
-        signals.append("SELL")
-        reasons.append("Price below SMA50")
+    # Moving Average signals (check for valid values)
+    if pd.notna(latest.get('sma_50', np.nan)):
+        if latest['close'] > latest['sma_50']:
+            score += 1
+            signals.append("BUY")
+            reasons.append("Price above SMA50")
+        else:
+            score -= 1
+            signals.append("SELL")
+            reasons.append("Price below SMA50")
 
-    # Bollinger Bands
-    if latest['close'] < latest['bb_lower']:
-        score += 1
-        signals.append("BUY")
-        reasons.append("Price at lower Bollinger Band")
-    elif latest['close'] > latest['bb_upper']:
-        score -= 1
-        signals.append("SELL")
-        reasons.append("Price at upper Bollinger Band")
+    # Bollinger Bands (check for valid values)
+    if pd.notna(latest.get('bb_lower', np.nan)) and pd.notna(latest.get('bb_upper', np.nan)):
+        if latest['close'] < latest['bb_lower']:
+            score += 1
+            signals.append("BUY")
+            reasons.append("Price at lower Bollinger Band")
+        elif latest['close'] > latest['bb_upper']:
+            score -= 1
+            signals.append("SELL")
+            reasons.append("Price at upper Bollinger Band")
 
     # Prediction trend
-    if predictions['1d']['trend'] == "UP":
+    if predictions.get('1d', {}).get('trend') == "UP":
         score += 1
         signals.append("BUY")
         reasons.append("1d prediction bullish")
-    elif predictions['1d']['trend'] == "DOWN":
+    elif predictions.get('1d', {}).get('trend') == "DOWN":
         score -= 1
         signals.append("SELL")
         reasons.append("1d prediction bearish")
@@ -281,6 +304,10 @@ if df is None or len(df) == 0:
 
 # Calculate indicators
 df = calculate_technical_indicators(df)
+
+# Show warning if insufficient data
+if len(df) < 50:
+    st.warning(f"⚠️ Limited data available ({len(df)} days). Technical indicators may not be accurate. Consider selecting a longer time period.")
 
 # Get latest data
 latest = df.iloc[-1]
