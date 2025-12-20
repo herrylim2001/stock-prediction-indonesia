@@ -7,7 +7,6 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 import ta
 from ta.trend import SMAIndicator, EMAIndicator, MACD
@@ -369,76 +368,112 @@ tab1, tab2, tab3, tab4 = st.tabs(["📊 Chart & Indicators", "🎯 Predictions",
 
 with tab1:
     # Price chart with indicators
-    fig = make_subplots(
-        rows=3,
-        cols=1,
-        shared_xaxis=True,
-        vertical_spacing=0.05,
-        subplot_titles=('Price & Moving Averages', 'MACD', 'RSI')
-    )
+    st.subheader("📊 Price & Moving Averages")
+
+    fig_price = go.Figure()
 
     # Candlestick
-    fig.add_trace(
-        go.Candlestick(
-            x=df['date'],
-            open=df['open'],
-            high=df['high'],
-            low=df['low'],
-            close=df['close'],
-            name="Price"
-        ),
-        row=1, col=1
-    )
+    fig_price.add_trace(go.Candlestick(
+        x=df['date'],
+        open=df['open'],
+        high=df['high'],
+        low=df['low'],
+        close=df['close'],
+        name="Price"
+    ))
 
     # Moving averages
-    fig.add_trace(
-        go.Scatter(x=df['date'], y=df['sma_10'], name="SMA 10", line=dict(color='orange', width=1)),
-        row=1, col=1
-    )
-    fig.add_trace(
-        go.Scatter(x=df['date'], y=df['sma_50'], name="SMA 50", line=dict(color='blue', width=1)),
-        row=1, col=1
-    )
+    fig_price.add_trace(go.Scatter(
+        x=df['date'],
+        y=df['sma_10'],
+        name="SMA 10",
+        line=dict(color='orange', width=1.5)
+    ))
+    fig_price.add_trace(go.Scatter(
+        x=df['date'],
+        y=df['sma_50'],
+        name="SMA 50",
+        line=dict(color='blue', width=1.5)
+    ))
 
     # Bollinger Bands
-    fig.add_trace(
-        go.Scatter(x=df['date'], y=df['bb_upper'], name="BB Upper", line=dict(color='gray', width=1, dash='dash')),
-        row=1, col=1
-    )
-    fig.add_trace(
-        go.Scatter(x=df['date'], y=df['bb_lower'], name="BB Lower", line=dict(color='gray', width=1, dash='dash')),
-        row=1, col=1
+    fig_price.add_trace(go.Scatter(
+        x=df['date'],
+        y=df['bb_upper'],
+        name="BB Upper",
+        line=dict(color='gray', width=1, dash='dash')
+    ))
+    fig_price.add_trace(go.Scatter(
+        x=df['date'],
+        y=df['bb_lower'],
+        name="BB Lower",
+        line=dict(color='gray', width=1, dash='dash'),
+        fill='tonexty'
+    ))
+
+    fig_price.update_layout(
+        height=400,
+        xaxis_rangeslider_visible=False,
+        hovermode='x unified'
     )
 
-    # MACD
-    fig.add_trace(
-        go.Scatter(x=df['date'], y=df['macd'], name="MACD", line=dict(color='blue', width=1)),
-        row=2, col=1
-    )
-    fig.add_trace(
-        go.Scatter(x=df['date'], y=df['macd_signal'], name="Signal", line=dict(color='orange', width=1)),
-        row=2, col=1
-    )
-    fig.add_trace(
-        go.Bar(x=df['date'], y=df['macd_diff'], name="Histogram", marker_color='gray'),
-        row=2, col=1
+    st.plotly_chart(fig_price, use_container_width=True)
+
+    # MACD Chart
+    st.subheader("📉 MACD")
+
+    fig_macd = go.Figure()
+
+    fig_macd.add_trace(go.Scatter(
+        x=df['date'],
+        y=df['macd'],
+        name="MACD",
+        line=dict(color='blue', width=2)
+    ))
+    fig_macd.add_trace(go.Scatter(
+        x=df['date'],
+        y=df['macd_signal'],
+        name="Signal",
+        line=dict(color='orange', width=2)
+    ))
+    fig_macd.add_trace(go.Bar(
+        x=df['date'],
+        y=df['macd_diff'],
+        name="Histogram",
+        marker_color='lightgray'
+    ))
+
+    fig_macd.update_layout(
+        height=250,
+        hovermode='x unified'
     )
 
-    # RSI
-    fig.add_trace(
-        go.Scatter(x=df['date'], y=df['rsi'], name="RSI", line=dict(color='purple', width=2)),
-        row=3, col=1
-    )
-    fig.add_hline(y=70, line_dash="dash", line_color="red", row=3, col=1)
-    fig.add_hline(y=30, line_dash="dash", line_color="green", row=3, col=1)
+    st.plotly_chart(fig_macd, use_container_width=True)
 
-    fig.update_layout(
-        height=800,
-        showlegend=True,
-        xaxis_rangeslider_visible=False
+    # RSI Chart
+    st.subheader("📊 RSI (Relative Strength Index)")
+
+    fig_rsi = go.Figure()
+
+    fig_rsi.add_trace(go.Scatter(
+        x=df['date'],
+        y=df['rsi'],
+        name="RSI",
+        line=dict(color='purple', width=2)
+    ))
+
+    # Overbought/Oversold lines
+    fig_rsi.add_hline(y=70, line_dash="dash", line_color="red", annotation_text="Overbought (70)")
+    fig_rsi.add_hline(y=30, line_dash="dash", line_color="green", annotation_text="Oversold (30)")
+    fig_rsi.add_hline(y=50, line_dash="dot", line_color="gray", annotation_text="Neutral (50)")
+
+    fig_rsi.update_layout(
+        height=250,
+        yaxis_range=[0, 100],
+        hovermode='x unified'
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig_rsi, use_container_width=True)
 
 with tab2:
     st.subheader("🔮 Price Predictions")
