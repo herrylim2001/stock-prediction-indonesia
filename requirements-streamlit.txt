@@ -1,0 +1,7 @@
+# Streamlit Demo Requirements (Lightweight)
+streamlit>=1.29.0
+pandas>=2.0.0
+numpy>=1.24.0
+yfinance>=0.2.30
+plotly>=5.18.0
+ta>=0.11.0
