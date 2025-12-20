@@ -1,0 +1,3 @@
+# Data folder
+# Large Excel/CSV files are ignored by .gitignore
+# Run: python create_templates.py to generate sample data

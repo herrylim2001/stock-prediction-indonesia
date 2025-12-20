@@ -1,0 +1,3 @@
+# Placeholder for ML model files
+# Model files (.h5, .pkl, .joblib) are ignored by .gitignore due to size
+# Run training scripts to generate models
