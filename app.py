@@ -36,23 +36,48 @@ STOCKS = {
 }
 
 # Helper functions
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=7200)  # Cache for 2 hours
 def fetch_stock_data(stock_code, period="6mo"):
-    """Fetch stock data from Yahoo Finance"""
+    """Fetch stock data from Yahoo Finance with retry mechanism"""
     ticker = f"{stock_code}.JK"
-    try:
-        stock = yf.Ticker(ticker)
-        df = stock.history(period=period, interval="1d")
 
-        if df.empty:
-            return None
+    max_retries = 3
+    retry_delay = 2  # seconds
 
-        df = df.reset_index()
-        df.columns = [col.lower() for col in df.columns]
-        return df
-    except Exception as e:
-        st.error(f"Error fetching data: {e}")
-        return None
+    for attempt in range(max_retries):
+        try:
+            stock = yf.Ticker(ticker)
+            df = stock.history(period=period, interval="1d")
+
+            if df.empty:
+                if attempt < max_retries - 1:
+                    st.warning(f"No data returned. Retrying in {retry_delay} seconds... (Attempt {attempt + 1}/{max_retries})")
+                    import time
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                    continue
+                return None
+
+            df = df.reset_index()
+            df.columns = [col.lower() for col in df.columns]
+            return df
+
+        except Exception as e:
+            if "Too Many Requests" in str(e) or "Rate" in str(e):
+                if attempt < max_retries - 1:
+                    st.warning(f"⏳ Rate limited by Yahoo Finance. Waiting {retry_delay} seconds... (Attempt {attempt + 1}/{max_retries})")
+                    import time
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                    continue
+                else:
+                    st.error(f"❌ Yahoo Finance API rate limit exceeded. Please wait a few minutes and try again.")
+                    return None
+            else:
+                st.error(f"Error fetching data: {e}")
+                return None
+
+    return None
 
 def calculate_technical_indicators(df):
     """Calculate technical indicators"""
@@ -298,7 +323,15 @@ with st.spinner(f"Fetching data for {selected_stock}..."):
     df = fetch_stock_data(selected_stock, period)
 
 if df is None or len(df) == 0:
-    st.error(f"❌ No data available for {selected_stock}. Please try another stock.")
+    st.error(f"❌ No data available for {selected_stock}.")
+    st.info("""
+    **💡 Troubleshooting:**
+    - Yahoo Finance API may be rate limited (too many requests)
+    - Try waiting 2-3 minutes and refresh the page
+    - Try selecting a different stock from the sidebar
+    - Try a different time period (1mo, 3mo, etc.)
+    - Clear your browser cache and reload
+    """)
     st.stop()
 
 # Calculate indicators
