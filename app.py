@@ -12,6 +12,16 @@ import ta
 from ta.trend import SMAIndicator, EMAIndicator, MACD
 from ta.momentum import RSIIndicator, StochasticOscillator
 from ta.volatility import BollingerBands, AverageTrueRange
+import sys
+import os
+
+# Add project root to path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# Import custom modules
+from models.predictor import get_predictor
+from utils.news_scraper import IndonesianNewsScraper
+from utils.sentiment_analyzer import IndonesianSentimentAnalyzer
 
 # Page config
 st.set_page_config(
@@ -348,11 +358,44 @@ prev_close = df.iloc[-2]['close'] if len(df) > 1 else current_price
 price_change = current_price - prev_close
 price_change_pct = (price_change / prev_close) * 100
 
-# Generate predictions
-predictions = generate_mock_predictions(current_price)
+# Initialize predictor and news modules
+@st.cache_resource
+def initialize_modules():
+    predictor = get_predictor()
+    news_scraper = IndonesianNewsScraper()
+    sentiment_analyzer = IndonesianSentimentAnalyzer()
+    return predictor, news_scraper, sentiment_analyzer
 
-# Generate signal
+predictor, news_scraper, sentiment_analyzer = initialize_modules()
+
+# Generate predictions using LSTM or mock
+predictions = predictor.predict_multiple_horizons(df, selected_stock, current_price)
+
+# Scrape news and analyze sentiment
+with st.spinner("Fetching latest news..."):
+    try:
+        news_df = news_scraper.scrape_all(selected_stock, limit=5)
+        if not news_df.empty:
+            news_articles = news_df.to_dict('records')
+            sentiment_result = sentiment_analyzer.analyze_articles(news_articles)
+        else:
+            news_articles = []
+            sentiment_result = None
+    except Exception as e:
+        news_articles = []
+        sentiment_result = None
+
+# Generate signal (combining technical + sentiment)
 signal_data = generate_trading_signal(df, predictions)
+
+# Adjust signal with news sentiment if available
+if sentiment_result and sentiment_result['average_score'] != 0:
+    sentiment_signal = sentiment_analyzer.get_market_sentiment_signal(sentiment_result['average_score'])
+    signal_data['sentiment_signal'] = sentiment_signal
+    signal_data['sentiment_score'] = sentiment_result['average_score']
+else:
+    signal_data['sentiment_signal'] = "NEUTRAL"
+    signal_data['sentiment_score'] = 0.0
 
 # Calculate lot recommendation
 lot_rec = calculate_lot_recommendation(current_price, modal_total, risk_per_trade, stop_loss_pct)
@@ -397,7 +440,7 @@ with col5:
 st.markdown("---")
 
 # Tabs
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Chart & Indicators", "🎯 Predictions", "💡 Trading Recommendation", "📈 Technical Analysis"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Chart & Indicators", "🎯 Predictions", "💡 Trading Recommendation", "📈 Technical Analysis", "📰 News & Sentiment"])
 
 with tab1:
     # Price chart with indicators
@@ -695,6 +738,139 @@ with tab4:
     with col3:
         volatility = df['close'].pct_change().std() * np.sqrt(252) * 100
         st.metric("Annualized Volatility", f"{volatility:.2f}%")
+
+with tab5:
+    st.subheader("📰 News & Sentiment Analysis")
+
+    # Model status indicator
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        if predictor.is_model_loaded():
+            st.success("🤖 Using LSTM Model for Predictions")
+        else:
+            st.warning("⚠️ LSTM Model not loaded. Using mock predictions. Train model with: `python models/train_model.py`")
+    with col2:
+        model_status = "Real LSTM" if predictor.is_model_loaded() else "Mock Data"
+        st.metric("Prediction Mode", model_status)
+
+    st.markdown("---")
+
+    # Sentiment Summary
+    if sentiment_result:
+        st.markdown("### 📊 Sentiment Overview")
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            sentiment_color = {
+                'positive': '🟢',
+                'neutral': '🟡',
+                'negative': '🔴'
+            }
+            overall = sentiment_result['overall_sentiment']
+            st.metric(
+                "Overall Sentiment",
+                f"{sentiment_color.get(overall, '🟡')} {overall.upper()}",
+                f"Score: {sentiment_result['average_score']:.3f}"
+            )
+
+        with col2:
+            st.metric(
+                "News Articles",
+                sentiment_result['total_articles'],
+                f"Analyzed"
+            )
+
+        with col3:
+            signal = signal_data.get('sentiment_signal', 'NEUTRAL')
+            signal_color = "🟢" if "BUY" in signal else "🔴" if "SELL" in signal else "🟡"
+            st.metric(
+                "Sentiment Signal",
+                f"{signal_color} {signal}"
+            )
+
+        # Sentiment Distribution
+        st.markdown("### 📈 Sentiment Distribution")
+
+        dist = sentiment_result['sentiment_distribution']
+        fig_sent = go.Figure(data=[
+            go.Bar(
+                x=['Positive', 'Neutral', 'Negative'],
+                y=[dist['positive'], dist['neutral'], dist['negative']],
+                marker_color=['green', 'gray', 'red']
+            )
+        ])
+        fig_sent.update_layout(
+            height=300,
+            xaxis_title="Sentiment",
+            yaxis_title="Number of Articles"
+        )
+        st.plotly_chart(fig_sent, use_container_width=True)
+
+    else:
+        st.info("ℹ️ No recent news found or news scraping unavailable.")
+
+    st.markdown("---")
+
+    # News Articles
+    st.markdown("### 📰 Latest News")
+
+    if news_articles:
+        for i, article in enumerate(news_articles[:5], 1):
+            with st.expander(f"{i}. [{article['source']}] {article['title']}"):
+                st.markdown(f"**Source:** {article['source']}")
+                st.markdown(f"**Published:** {article.get('published', 'N/A')}")
+
+                if article.get('url'):
+                    st.markdown(f"**Link:** [{article['url']}]({article['url']})")
+
+                # Show sentiment analysis for this article
+                article_sentiment = None
+                if sentiment_result:
+                    for sent in sentiment_result.get('article_sentiments', []):
+                        if sent['title'] == article['title']:
+                            article_sentiment = sent
+                            break
+
+                if article_sentiment:
+                    sent_col1, sent_col2, sent_col3 = st.columns(3)
+                    with sent_col1:
+                        st.metric("Sentiment", article_sentiment['sentiment'].upper())
+                    with sent_col2:
+                        st.metric("Score", f"{article_sentiment['score']:.3f}")
+                    with sent_col3:
+                        st.metric("Confidence", f"{article_sentiment['confidence']:.1%}")
+    else:
+        st.info("📭 No recent news articles found for this stock.")
+
+        st.markdown("**Tips:**")
+        st.markdown("- News scraping may be temporarily unavailable")
+        st.markdown("- Try refreshing the page")
+        st.markdown("- Check your internet connection")
+
+    st.markdown("---")
+
+    # News impact on trading
+    st.markdown("### 💡 How News Sentiment Affects Trading Signal")
+
+    st.markdown("""
+    The trading signal combines:
+    1. **Technical Analysis** (70% weight): RSI, MACD, Moving Averages, Bollinger Bands
+    2. **News Sentiment** (30% weight): Aggregated sentiment from recent news
+
+    **Sentiment Scoring:**
+    - Positive sentiment (+0.5 to +1.0): Bullish indicator
+    - Neutral sentiment (-0.2 to +0.2): No strong signal
+    - Negative sentiment (-1.0 to -0.5): Bearish indicator
+    """)
+
+    if sentiment_result:
+        st.info(f"""
+        **Current Analysis:**
+        - Technical signal: {signal_data['signal']}
+        - Sentiment signal: {signal_data.get('sentiment_signal', 'NEUTRAL')}
+        - Combined score: {signal_data.get('score', 0) + (signal_data.get('sentiment_score', 0) * 3):.1f}
+        """)
 
 # Footer
 st.markdown("---")
