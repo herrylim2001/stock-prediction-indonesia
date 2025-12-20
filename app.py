@@ -374,11 +374,7 @@ with tab1:
         cols=1,
         shared_xaxis=True,
         vertical_spacing=0.05,
-        subplot_titles=['Price & Moving Averages', 'MACD', 'RSI'],
-        row_heights=[0.5, 0.25, 0.25],
-        specs=[[{"type": "xy"}],
-               [{"type": "xy"}],
-               [{"type": "xy"}]]
+        subplot_titles=('Price & Moving Averages', 'MACD', 'RSI')
     )
 
     # Candlestick
