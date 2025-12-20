@@ -343,11 +343,15 @@ tab1, tab2, tab3, tab4 = st.tabs(["📊 Chart & Indicators", "🎯 Predictions",
 with tab1:
     # Price chart with indicators
     fig = make_subplots(
-        rows=3, cols=1,
+        rows=3,
+        cols=1,
         shared_xaxis=True,
         vertical_spacing=0.05,
-        subplot_titles=('Price & Moving Averages', 'MACD', 'RSI'),
-        row_heights=[0.5, 0.25, 0.25]
+        subplot_titles=['Price & Moving Averages', 'MACD', 'RSI'],
+        row_heights=[0.5, 0.25, 0.25],
+        specs=[[{"type": "xy"}],
+               [{"type": "xy"}],
+               [{"type": "xy"}]]
     )
 
     # Candlestick
