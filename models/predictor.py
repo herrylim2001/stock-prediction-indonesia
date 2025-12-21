@@ -247,29 +247,39 @@ class StockPredictor:
         """Generate mock predictions when model not available"""
         trend = np.random.choice([-1, 0, 1], p=[0.3, 0.2, 0.5])
 
+        # Calculate price changes
+        change_1h = np.random.normal(0.001 * trend, volatility * 0.3)
+        change_3h = np.random.normal(0.003 * trend, volatility * 0.5)
+        change_1d = np.random.normal(0.01 * trend, volatility)
+        change_3d = np.random.normal(0.03 * trend, volatility * 1.5)
+
         return {
             "1h": {
-                "price": current_price * (1 + np.random.normal(0.001 * trend, volatility * 0.3)),
+                "price": current_price * (1 + change_1h),
                 "confidence": np.random.uniform(0.65, 0.75),
                 "trend": "UP" if trend > 0 else "DOWN" if trend < 0 else "NEUTRAL",
+                "change_pct": change_1h * 100,
                 "model_used": "Mock (model not loaded)"
             },
             "3h": {
-                "price": current_price * (1 + np.random.normal(0.003 * trend, volatility * 0.5)),
+                "price": current_price * (1 + change_3h),
                 "confidence": np.random.uniform(0.63, 0.73),
                 "trend": "UP" if trend > 0 else "DOWN" if trend < 0 else "NEUTRAL",
+                "change_pct": change_3h * 100,
                 "model_used": "Mock (model not loaded)"
             },
             "1d": {
-                "price": current_price * (1 + np.random.normal(0.01 * trend, volatility)),
+                "price": current_price * (1 + change_1d),
                 "confidence": np.random.uniform(0.68, 0.78),
                 "trend": "UP" if trend > 0 else "DOWN" if trend < 0 else "NEUTRAL",
+                "change_pct": change_1d * 100,
                 "model_used": "Mock (model not loaded)"
             },
             "3d": {
-                "price": current_price * (1 + np.random.normal(0.03 * trend, volatility * 1.5)),
+                "price": current_price * (1 + change_3d),
                 "confidence": np.random.uniform(0.60, 0.72),
                 "trend": "UP" if trend > 0 else "DOWN" if trend < 0 else "NEUTRAL",
+                "change_pct": change_3d * 100,
                 "model_used": "Mock (model not loaded)"
             }
         }
