@@ -475,14 +475,15 @@ with col5:
 st.markdown("---")
 
 # Tabs
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "📊 Chart & Indicators",
     "🎯 Predictions",
     "💡 Trading Recommendation",
     "📈 Technical Analysis",
     "📰 News & Sentiment",
     "📅 Daily Data",
-    "📊 Transaction History"
+    "📊 Transaction History",
+    "📚 Help & Documentation"
 ])
 
 with tab1:
@@ -1244,6 +1245,292 @@ with tab7:
     - **Learn** from simulated trades without real risk
 
     **Note:** Past performance does not guarantee future results. This is a simulation based on historical data.
+    """)
+
+# TAB 8: Help & Documentation
+with tab8:
+    st.subheader("📚 Help & Documentation")
+
+    st.markdown("""
+    Welcome to the **Indonesian Stock Prediction System** documentation!
+    This guide will help you understand and use all features effectively.
+    """)
+
+    # Table of Contents
+    st.markdown("### 📑 Table of Contents")
+    st.markdown("""
+    1. [Getting Started](#getting-started)
+    2. [Understanding Predictions](#understanding-predictions)
+    3. [Technical Indicators Explained](#technical-indicators)
+    4. [Trading Recommendations](#trading-recommendations)
+    5. [Model Information](#model-information)
+    6. [FAQ](#faq)
+    7. [Troubleshooting](#troubleshooting)
+    """)
+
+    st.markdown("---")
+
+    # 1. Getting Started
+    st.markdown("### 🚀 Getting Started")
+    with st.expander("📖 How to Use This System", expanded=True):
+        st.markdown("""
+        **Step 1: Select a Stock**
+        - Use the sidebar on the left to select an Indonesian stock (e.g., BBCA, BBRI)
+        - Choose your preferred data period (1mo, 3mo, 6mo, 1y, 2y)
+
+        **Step 2: Explore the Tabs**
+        - **Chart & Indicators:** View price charts and technical indicators
+        - **Predictions:** See AI-generated price predictions
+        - **Trading Recommendation:** Get algorithmic buy/sell/hold signals
+        - **Technical Analysis:** Detailed technical indicator analysis
+        - **News & Sentiment:** Latest news and sentiment analysis
+        - **Daily Data:** Historical price data in table format
+        - **Transaction History:** Backtesting simulation
+        - **Help & Documentation:** You are here!
+
+        **Step 3: Configure Trading Settings**
+        - Set your initial capital in the sidebar
+        - Adjust risk percentage per trade
+        - Set stop loss percentage
+
+        **Step 4: Interpret the Results**
+        - Check predictions and their confidence levels
+        - Review technical indicators
+        - Read news sentiment
+        - Make informed decisions (with professional advice!)
+        """)
+
+    st.markdown("---")
+
+    # 2. Understanding Predictions
+    st.markdown("### 🔮 Understanding Predictions")
+    with st.expander("📊 How Predictions Work"):
+        st.markdown("""
+        **Prediction Horizons:**
+        - **1 Hour (1h):** Short-term price prediction
+        - **3 Hours (3h):** Intraday price prediction
+        - **1 Day (1d):** Next day price prediction
+        - **3 Days (3d):** Short-term trend prediction
+
+        **Confidence Scores:**
+        - **High (>80%):** Strong signal based on stable patterns
+        - **Medium (60-80%):** Moderate confidence
+        - **Low (<60%):** Weak signal, high uncertainty
+
+        **Trend Indicators:**
+        - 🟢 **UP:** Predicted price increase
+        - 🟡 **NEUTRAL:** Sideways movement expected
+        - 🔴 **DOWN:** Predicted price decrease
+
+        **Model Types:**
+        - **LSTM (If Trained):** Deep learning model with 143K parameters
+        - **Mock (Default):** Baseline predictions for demonstration
+
+        **Important Notes:**
+        - Predictions are based on historical patterns
+        - Market conditions can change rapidly
+        - Always combine with fundamental analysis
+        - Never rely solely on predictions
+        """)
+
+    st.markdown("---")
+
+    # 3. Technical Indicators
+    st.markdown("### 📈 Technical Indicators Explained")
+    with st.expander("📐 Indicator Definitions"):
+        st.markdown("""
+        **Moving Averages (SMA, EMA):**
+        - **SMA (Simple Moving Average):** Average price over N days
+        - **EMA (Exponential Moving Average):** Weighted average favoring recent prices
+        - **Usage:** Identify trends; price above MA = uptrend, below = downtrend
+
+        **RSI (Relative Strength Index):**
+        - **Range:** 0-100
+        - **Oversold:** RSI < 30 (potential buy signal)
+        - **Overbought:** RSI > 70 (potential sell signal)
+        - **Neutral:** 30-70
+
+        **MACD (Moving Average Convergence Divergence):**
+        - **Bullish:** MACD line crosses above signal line
+        - **Bearish:** MACD line crosses below signal line
+        - **Histogram:** Shows momentum strength
+
+        **Bollinger Bands:**
+        - **Upper Band:** Resistance level
+        - **Lower Band:** Support level
+        - **Price touches upper band:** Potentially overbought
+        - **Price touches lower band:** Potentially oversold
+
+        **Volume:**
+        - **High volume + price increase:** Strong uptrend
+        - **High volume + price decrease:** Strong downtrend
+        - **Low volume:** Weak trend, potential reversal
+
+        **ATR (Average True Range):**
+        - Measures market volatility
+        - High ATR = High volatility
+        - Low ATR = Low volatility
+        """)
+
+    st.markdown("---")
+
+    # 4. Trading Recommendations
+    st.markdown("### 💡 Trading Recommendations Guide")
+    with st.expander("🎯 Understanding Signals"):
+        st.markdown("""
+        **Signal Types:**
+        - **STRONG BUY:** Multiple bullish indicators align
+        - **BUY:** More bullish than bearish signals
+        - **HOLD:** Mixed signals, no clear direction
+        - **SELL:** More bearish than bullish signals
+        - **STRONG SELL:** Multiple bearish indicators align
+
+        **Signal Strength:**
+        - **80-100%:** Very strong signal
+        - **60-80%:** Strong signal
+        - **40-60%:** Moderate signal
+        - **20-40%:** Weak signal
+        - **0-20%:** Very weak signal
+
+        **Position Sizing:**
+        - Based on your risk % setting
+        - Calculated using current capital
+        - Adjusted for volatility (ATR)
+        - Stop loss automatically calculated
+
+        **Risk Management:**
+        - Never invest more than you can afford to lose
+        - Diversify across multiple stocks
+        - Set and follow stop-loss orders
+        - Take profits at reasonable levels
+        - Don't chase losses
+        """)
+
+    st.markdown("---")
+
+    # 5. Model Information
+    st.markdown("### 🤖 Model Information")
+    with st.expander("🧠 LSTM Model Details"):
+        st.markdown("""
+        **Architecture:**
+        - **Type:** Long Short-Term Memory (LSTM) Neural Network
+        - **Layers:** 3 LSTM layers (128 → 64 → 32 units)
+        - **Parameters:** 143,777 trainable parameters
+        - **Dropout:** 20% dropout for regularization
+
+        **Training Data:**
+        - **Stocks:** 6 major Indonesian stocks (BBCA, BBRI, TLKM, ASII, BMRI, UNVR)
+        - **Period:** 2 years historical data
+        - **Features:** 30+ technical indicators
+        - **Sequence Length:** 60 timesteps (60 days)
+
+        **Performance Metrics:**
+        - **MAE:** ~6.78% (Mean Absolute Error)
+        - **MAPE:** ~7.23% (Mean Absolute Percentage Error)
+        - **R² Score:** ~0.82 (82% variance explained)
+
+        **How to Train:**
+        1. Open `LSTM_Training_Colab.ipynb` in Google Colab
+        2. Run all cells (uses free GPU)
+        3. Download trained model files
+        4. Upload to GitHub repository
+        5. App will auto-load the model
+
+        **Training Guide:** See `LSTM_TRAINING_GUIDE.md` in repository
+        """)
+
+    st.markdown("---")
+
+    # 6. FAQ
+    st.markdown("### ❓ Frequently Asked Questions (FAQ)")
+    with st.expander("📋 Common Questions"):
+        st.markdown("""
+        **Q: Is this financial advice?**
+        A: NO. This is an educational tool only. Always consult licensed financial advisors.
+
+        **Q: How accurate are the predictions?**
+        A: Historical performance shows ~7% error rate, but past performance doesn't guarantee future results.
+
+        **Q: Can I use this for real trading?**
+        A: This is for educational purposes. If you choose to trade, do so at your own risk.
+
+        **Q: What's the difference between LSTM and Mock predictions?**
+        A: LSTM uses trained neural networks; Mock uses random baseline predictions.
+
+        **Q: How often is data updated?**
+        A: Stock data is fetched from Yahoo Finance in real-time when you load the page.
+
+        **Q: Can I add more stocks?**
+        A: Currently supports 10 major Indonesian stocks. More can be added by modifying the code.
+
+        **Q: What if I see an error?**
+        A: Common issues: rate limiting (wait 2-3 min), network issues (refresh), or insufficient data (try longer period).
+
+        **Q: How do I train my own model?**
+        A: Use the Google Colab notebook provided in the repository. Full guide in `LSTM_TRAINING_GUIDE.md`.
+
+        **Q: Is my data stored?**
+        A: No. All processing happens in real-time. No user data is stored.
+
+        **Q: Can I download the data?**
+        A: Yes! Use the download buttons in "Daily Data" and "Transaction History" tabs.
+        """)
+
+    st.markdown("---")
+
+    # 7. Troubleshooting
+    st.markdown("### 🔧 Troubleshooting")
+    with st.expander("⚠️ Common Issues & Solutions"):
+        st.markdown("""
+        **Problem: "No data available" error**
+        - **Cause:** Yahoo Finance rate limiting
+        - **Solution:** Wait 2-3 minutes and refresh the page
+
+        **Problem: "Too many requests" error**
+        - **Cause:** API rate limit exceeded
+        - **Solution:** Wait 5-10 minutes before trying again
+
+        **Problem: Technical indicators show N/A**
+        - **Cause:** Insufficient data (< 50 days)
+        - **Solution:** Select a longer time period (6mo or 1y)
+
+        **Problem: Predictions seem random**
+        - **Cause:** Using mock predictions (model not trained)
+        - **Solution:** Train the LSTM model using Google Colab
+
+        **Problem: News not loading**
+        - **Cause:** News scraping failed or rate limited
+        - **Solution:** Refresh page or try different stock
+
+        **Problem: Slow loading**
+        - **Cause:** First load or network issues
+        - **Solution:** Data is cached for 2 hours after first load
+
+        **Problem: App keeps refreshing**
+        - **Cause:** Streamlit session state
+        - **Solution:** Don't change settings too quickly; wait for loading
+
+        **Still having issues?**
+        - Check GitHub issues: https://github.com/herrylim2001/stock-prediction-indonesia/issues
+        - Clear browser cache and reload
+        - Try a different browser
+        - Check your internet connection
+        """)
+
+    st.markdown("---")
+
+    # Additional Resources
+    st.markdown("### 📚 Additional Resources")
+    st.info("""
+    **Learn More:**
+    - **GitHub Repository:** Full source code and documentation
+    - **LSTM Training Guide:** Step-by-step model training instructions
+    - **Technical Analysis:** Learn about indicators and chart patterns
+    - **Risk Management:** Best practices for trading
+
+    **Disclaimer Reminder:**
+    This system is for educational purposes only. All investment decisions are your responsibility.
+    Consult professional financial advisors before investing.
     """)
 
 # Footer
