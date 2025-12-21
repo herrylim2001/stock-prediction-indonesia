@@ -967,7 +967,7 @@ with tab7:
     # Simulate trades
     transactions = []
     position = None
-    capital = initial_capital
+    capital = modal_total
     shares = 0
 
     for i in range(len(df)):
@@ -1039,16 +1039,16 @@ with tab7:
             st.metric("Losing Trades", losses, delta=f"-{losses}", delta_color="inverse")
 
         # Final capital
-        final_return = ((capital - initial_capital) / initial_capital) * 100
+        final_return = ((capital - modal_total) / modal_total) * 100
 
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric("Initial Capital", f"Rp {initial_capital:,.0f}")
+            st.metric("Initial Capital", f"Rp {modal_total:,.0f}")
         with col2:
             st.metric("Final Capital", f"Rp {capital:,.0f}")
         with col3:
             st.metric("Total Return", f"{final_return:+.2f}%",
-                     delta=f"Rp {capital - initial_capital:+,.0f}")
+                     delta=f"Rp {capital - modal_total:+,.0f}")
 
         st.markdown("---")
 
