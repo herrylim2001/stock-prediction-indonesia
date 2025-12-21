@@ -440,7 +440,15 @@ with col5:
 st.markdown("---")
 
 # Tabs
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Chart & Indicators", "🎯 Predictions", "💡 Trading Recommendation", "📈 Technical Analysis", "📰 News & Sentiment"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    "📊 Chart & Indicators",
+    "🎯 Predictions",
+    "💡 Trading Recommendation",
+    "📈 Technical Analysis",
+    "📰 News & Sentiment",
+    "📅 Daily Data",
+    "📊 Transaction History"
+])
 
 with tab1:
     # Price chart with indicators
@@ -871,6 +879,209 @@ with tab5:
         - Sentiment signal: {signal_data.get('sentiment_signal', 'NEUTRAL')}
         - Combined score: {signal_data.get('score', 0) + (signal_data.get('sentiment_score', 0) * 3):.1f}
         """)
+
+# TAB 6: Daily Data
+with tab6:
+    st.subheader("📅 Daily Price Data")
+
+    st.markdown("""
+    **Detailed daily stock data** showing OHLCV (Open, High, Low, Close, Volume) for the selected period.
+    This data can help you track price movements and identify patterns.
+    """)
+
+    # Prepare daily data display
+    daily_data = df[['date', 'open', 'high', 'low', 'close', 'volume']].copy()
+    daily_data['change'] = daily_data['close'].diff()
+    daily_data['change_pct'] = daily_data['close'].pct_change() * 100
+
+    # Format columns
+    daily_data['date'] = pd.to_datetime(daily_data['date']).dt.strftime('%Y-%m-%d')
+    daily_data['open'] = daily_data['open'].apply(lambda x: f"Rp {x:,.0f}")
+    daily_data['high'] = daily_data['high'].apply(lambda x: f"Rp {x:,.0f}")
+    daily_data['low'] = daily_data['low'].apply(lambda x: f"Rp {x:,.0f}")
+    daily_data['close'] = daily_data['close'].apply(lambda x: f"Rp {x:,.0f}")
+    daily_data['volume'] = daily_data['volume'].apply(lambda x: f"{x:,.0f}")
+    daily_data['change'] = daily_data['change'].apply(lambda x: f"{x:+.0f}" if pd.notna(x) else "")
+    daily_data['change_pct'] = daily_data['change_pct'].apply(lambda x: f"{x:+.2f}%" if pd.notna(x) else "")
+
+    # Rename columns for display
+    daily_data.columns = ['Date', 'Open', 'High', 'Low', 'Close', 'Volume', 'Change (Rp)', 'Change (%)']
+
+    # Display options
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        show_rows = st.selectbox("Show rows:", [10, 20, 50, 100, "All"], index=1)
+
+    # Display table
+    if show_rows == "All":
+        st.dataframe(daily_data.iloc[::-1], use_container_width=True, height=600)
+    else:
+        st.dataframe(daily_data.iloc[::-1].head(show_rows), use_container_width=True)
+
+    # Summary statistics
+    st.markdown("### 📊 Period Summary")
+    col1, col2, col3, col4 = st.columns(4)
+
+    # Parse prices back to numeric for calculations
+    close_prices = df['close']
+
+    with col1:
+        st.metric("Period High", f"Rp {close_prices.max():,.0f}")
+    with col2:
+        st.metric("Period Low", f"Rp {close_prices.min():,.0f}")
+    with col3:
+        avg_price = close_prices.mean()
+        st.metric("Average Price", f"Rp {avg_price:,.0f}")
+    with col4:
+        total_return = ((close_prices.iloc[-1] - close_prices.iloc[0]) / close_prices.iloc[0]) * 100
+        st.metric("Total Return", f"{total_return:+.2f}%")
+
+    # Download button
+    st.markdown("### 💾 Export Data")
+    csv = daily_data.to_csv(index=False)
+    st.download_button(
+        label="📥 Download Daily Data (CSV)",
+        data=csv,
+        file_name=f"{selected_stock}_daily_data_{datetime.now().strftime('%Y%m%d')}.csv",
+        mime="text/csv"
+    )
+
+# TAB 7: Transaction History
+with tab7:
+    st.subheader("📊 Transaction History Simulator")
+
+    st.markdown("""
+    **Simulated trading history** based on technical signals and predictions.
+    This shows what would have happened if you followed the system's recommendations.
+    """)
+
+    # Generate simulated transaction history
+    st.markdown("### 🎯 Trading Strategy Used:")
+    st.info("""
+    - **BUY Signal:** When RSI < 40 AND price below SMA_20 (oversold)
+    - **SELL Signal:** When RSI > 70 OR price 5% above purchase price (target profit)
+    - **Position Size:** Based on risk % setting in sidebar
+    - **Stop Loss:** -2% from purchase price
+    """)
+
+    # Simulate trades
+    transactions = []
+    position = None
+    capital = initial_capital
+    shares = 0
+
+    for i in range(len(df)):
+        row = df.iloc[i]
+        price = row['close']
+        rsi_val = row.get('rsi', 50)
+        sma_20 = row.get('sma_20', price)
+
+        # Buy signal
+        if position is None and rsi_val < 40 and price < sma_20:
+            # Calculate position size
+            risk_amount = capital * (risk_per_trade / 100)
+            shares = int(risk_amount / price)
+            if shares > 0:
+                cost = shares * price
+                capital -= cost
+                position = {
+                    'entry_date': row['date'],
+                    'entry_price': price,
+                    'shares': shares,
+                    'cost': cost
+                }
+
+        # Sell signal
+        elif position is not None:
+            profit_pct = ((price - position['entry_price']) / position['entry_price']) * 100
+
+            # Sell conditions: take profit or stop loss
+            if rsi_val > 70 or profit_pct >= 5 or profit_pct <= -2:
+                proceeds = shares * price
+                profit = proceeds - position['cost']
+                profit_pct = (profit / position['cost']) * 100
+                capital += proceeds
+
+                transactions.append({
+                    'Entry Date': pd.to_datetime(position['entry_date']).strftime('%Y-%m-%d'),
+                    'Exit Date': pd.to_datetime(row['date']).strftime('%Y-%m-%d'),
+                    'Entry Price': f"Rp {position['entry_price']:,.0f}",
+                    'Exit Price': f"Rp {price:,.0f}",
+                    'Shares': shares,
+                    'Cost': f"Rp {position['cost']:,.0f}",
+                    'Proceeds': f"Rp {proceeds:,.0f}",
+                    'Profit/Loss': f"Rp {profit:+,.0f}",
+                    'Return %': f"{profit_pct:+.2f}%",
+                    'Result': "✅ Profit" if profit > 0 else "❌ Loss"
+                })
+
+                position = None
+                shares = 0
+
+    # Display transactions
+    if transactions:
+        st.markdown(f"### 📋 Total Transactions: {len(transactions)}")
+
+        # Summary metrics
+        col1, col2, col3, col4 = st.columns(4)
+
+        wins = sum(1 for t in transactions if "Profit" in t['Result'])
+        losses = len(transactions) - wins
+        win_rate = (wins / len(transactions)) * 100 if transactions else 0
+
+        with col1:
+            st.metric("Total Trades", len(transactions))
+        with col2:
+            st.metric("Win Rate", f"{win_rate:.1f}%")
+        with col3:
+            st.metric("Winning Trades", wins, delta=f"+{wins}")
+        with col4:
+            st.metric("Losing Trades", losses, delta=f"-{losses}", delta_color="inverse")
+
+        # Final capital
+        final_return = ((capital - initial_capital) / initial_capital) * 100
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Initial Capital", f"Rp {initial_capital:,.0f}")
+        with col2:
+            st.metric("Final Capital", f"Rp {capital:,.0f}")
+        with col3:
+            st.metric("Total Return", f"{final_return:+.2f}%",
+                     delta=f"Rp {capital - initial_capital:+,.0f}")
+
+        st.markdown("---")
+
+        # Transactions table
+        st.markdown("### 📊 Transaction Details")
+        trans_df = pd.DataFrame(transactions)
+        st.dataframe(trans_df.iloc[::-1], use_container_width=True, height=400)
+
+        # Download button
+        st.markdown("### 💾 Export Transactions")
+        csv_trans = trans_df.to_csv(index=False)
+        st.download_button(
+            label="📥 Download Transactions (CSV)",
+            data=csv_trans,
+            file_name=f"{selected_stock}_transactions_{datetime.now().strftime('%Y%m%d')}.csv",
+            mime="text/csv"
+        )
+
+    else:
+        st.warning("⚠️ No transactions generated with current parameters. Try adjusting the data period or trading settings.")
+
+    st.markdown("---")
+    st.markdown("""
+    ### ℹ️ About Transaction History
+
+    This transaction simulator helps you:
+    - **Backtest** trading strategies on historical data
+    - **Understand** how signals would have performed
+    - **Optimize** your trading parameters
+    - **Learn** from simulated trades without real risk
+
+    **Note:** Past performance does not guarantee future results. This is a simulation based on historical data.
+    """)
 
 # Footer
 st.markdown("---")
