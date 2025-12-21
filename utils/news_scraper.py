@@ -8,9 +8,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import re
 
-class IndonesianNewsScr
-
-aper:
+class IndonesianNewsScraper:
     """Scraper for Indonesian financial news"""
 
     def __init__(self):
