@@ -345,7 +345,8 @@ if df is None or len(df) == 0:
     st.stop()
 
 # Calculate indicators
-df = calculate_technical_indicators(df)
+with st.spinner("📊 Calculating technical indicators..."):
+    df = calculate_technical_indicators(df)
 
 # Show warning if insufficient data
 if len(df) < 50:
@@ -369,10 +370,11 @@ def initialize_modules():
 predictor, news_scraper, sentiment_analyzer = initialize_modules()
 
 # Generate predictions using LSTM or mock
-predictions = predictor.predict_multiple_horizons(df, selected_stock, current_price)
+with st.spinner("🤖 Generating AI predictions..."):
+    predictions = predictor.predict_multiple_horizons(df, selected_stock, current_price)
 
 # Scrape news and analyze sentiment
-with st.spinner("Fetching latest news..."):
+with st.spinner("📰 Fetching latest news & analyzing sentiment..."):
     try:
         news_df = news_scraper.scrape_all(selected_stock, limit=5)
         if not news_df.empty:
