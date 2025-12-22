@@ -46,7 +46,7 @@ STOCKS = {
 }
 
 # Helper functions
-@st.cache_data(ttl=7200)  # Cache for 2 hours
+@st.cache_data(ttl=1800)  # Cache for 30 minutes (more frequent updates)
 def fetch_stock_data(stock_code, period="6mo"):
     """Fetch stock data from Yahoo Finance with retry mechanism"""
     ticker = f"{stock_code}.JK"
@@ -286,6 +286,73 @@ selected_stock = st.sidebar.selectbox(
     options=list(STOCKS.keys()),
     format_func=lambda x: f"{x} - {STOCKS[x]['name']}"
 )
+
+# Real-time Data Update Controls
+st.sidebar.markdown("---")
+st.sidebar.subheader("🔄 Data Updates")
+
+# Manual refresh button
+col1, col2 = st.sidebar.columns([2, 1])
+with col1:
+    if st.button("🔄 Refresh Data Now", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
+
+with col2:
+    st.caption("Clear cache")
+
+# Auto-refresh toggle
+enable_autorefresh = st.sidebar.checkbox(
+    "Enable Auto-Refresh",
+    value=False,
+    help="Automatically refresh data every few minutes"
+)
+
+if enable_autorefresh:
+    refresh_interval = st.sidebar.slider(
+        "Refresh Interval (minutes)",
+        min_value=1,
+        max_value=30,
+        value=5,
+        step=1,
+        help="How often to auto-refresh data"
+    )
+
+    st.sidebar.info(f"⏱️ Auto-refreshing every {refresh_interval} minute(s)")
+
+    # Auto-refresh implementation using native Streamlit
+    import time
+
+    # Try to import streamlit-autorefresh if available
+    try:
+        from streamlit_autorefresh import st_autorefresh
+        count = st_autorefresh(interval=refresh_interval * 60 * 1000, key="datarefresh")
+    except ImportError:
+        # Fallback: Use st.empty() for manual countdown
+        import datetime
+
+        # Initialize session state for last refresh time
+        if 'last_refresh' not in st.session_state:
+            st.session_state.last_refresh = datetime.datetime.now()
+
+        # Calculate time since last refresh
+        time_since_refresh = (datetime.datetime.now() - st.session_state.last_refresh).total_seconds()
+        time_until_refresh = (refresh_interval * 60) - time_since_refresh
+
+        if time_until_refresh <= 0:
+            # Time to refresh
+            st.session_state.last_refresh = datetime.datetime.now()
+            st.cache_data.clear()
+            st.rerun()
+        else:
+            # Show countdown
+            st.sidebar.caption(f"Next refresh in: {int(time_until_refresh)}s")
+            time.sleep(1)
+            st.rerun()
+
+st.sidebar.caption("💡 Data cached for 30 minutes")
+
+st.sidebar.markdown("---")
 
 # Trading config
 st.sidebar.subheader("💰 Trading Configuration")
