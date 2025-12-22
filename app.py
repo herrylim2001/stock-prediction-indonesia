@@ -833,10 +833,24 @@ with tab2:
     # Predictions Display
     pred_cols = st.columns(4)
 
+    # Mapping timeframes to timedelta
+    timeframe_deltas = {
+        "1h": timedelta(hours=1),
+        "3h": timedelta(hours=3),
+        "1d": timedelta(days=1),
+        "3d": timedelta(days=3)
+    }
+
     for i, (timeframe, pred) in enumerate(predictions.items()):
         with pred_cols[i]:
             price_diff = pred['price'] - current_price
             price_diff_pct = (price_diff / current_price) * 100
+
+            # Calculate target date/time for this prediction
+            target_datetime = current_time + timeframe_deltas.get(timeframe, timedelta(0))
+            day_name = target_datetime.strftime('%A')
+            target_date = target_datetime.strftime('%d %B %Y')
+            target_time = target_datetime.strftime('%H:%M WIB')
 
             st.markdown(f"### {timeframe.upper()}")
             st.metric(
@@ -849,6 +863,10 @@ with tab2:
 
             trend_color = "🟢" if pred['trend'] == "UP" else "🔴" if pred['trend'] == "DOWN" else "🟡"
             st.markdown(f"**Trend:** {trend_color} {pred['trend']}")
+
+            # Display target date and day
+            st.markdown(f"📅 **{day_name}**")
+            st.caption(f"{target_date} • {target_time}")
 
     # Prediction chart
     st.markdown("---")
