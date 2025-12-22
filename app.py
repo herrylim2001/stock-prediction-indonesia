@@ -323,6 +323,27 @@ period = st.sidebar.selectbox(
 
 st.sidebar.markdown("---")
 
+# Display session info
+from datetime import datetime
+import pytz
+
+try:
+    jakarta_tz = pytz.timezone('Asia/Jakarta')
+    session_time = datetime.now(jakarta_tz)
+except:
+    session_time = datetime.now()
+
+st.sidebar.info(f"""
+📅 **Session Info**
+
+**Date:** {session_time.strftime('%d %B %Y')}
+**Time:** {session_time.strftime('%H:%M:%S WIB')}
+
+*Data refreshed on page load*
+""")
+
+st.sidebar.markdown("---")
+
 # Enhanced Sidebar Disclaimer
 st.sidebar.error("⚠️ **RISK WARNING**")
 st.sidebar.markdown("""
@@ -344,6 +365,28 @@ This system is for:
 # Main content
 st.title(f"📈 {selected_stock} - {STOCKS[selected_stock]['name']}")
 st.markdown(f"**Sector:** {STOCKS[selected_stock]['sector']}")
+
+# Display current date/time and data info
+from datetime import datetime
+import pytz
+
+# Get current time in Indonesia timezone
+try:
+    jakarta_tz = pytz.timezone('Asia/Jakarta')
+    current_time = datetime.now(jakarta_tz)
+except:
+    current_time = datetime.now()
+
+col1, col2, col3 = st.columns([2, 2, 2])
+
+with col1:
+    st.info(f"📅 **Current Date:** {current_time.strftime('%d %B %Y')}")
+
+with col2:
+    st.info(f"🕐 **Current Time:** {current_time.strftime('%H:%M:%S WIB')}")
+
+with col3:
+    st.info(f"📊 **Data Period:** {period.upper()}")
 
 # Prominent Risk Disclaimer Banner
 st.warning("""
@@ -384,6 +427,16 @@ with st.spinner("📊 Calculating technical indicators..."):
 # Show warning if insufficient data
 if len(df) < 50:
     st.warning(f"⚠️ Limited data available ({len(df)} days). Technical indicators may not be accurate. Consider selecting a longer time period.")
+
+# Display data freshness information
+st.success(f"""
+✅ **Data Successfully Loaded**
+
+- **Data Points:** {len(df)} days
+- **Date Range:** {df['date'].min().strftime('%d %b %Y')} to {df['date'].max().strftime('%d %b %Y')}
+- **Last Updated:** {current_time.strftime('%d %B %Y %H:%M:%S WIB')}
+- **Data Source:** Yahoo Finance
+""")
 
 # Get latest data
 latest = df.iloc[-1]
