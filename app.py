@@ -304,8 +304,8 @@ with col2:
 # Auto-refresh toggle
 enable_autorefresh = st.sidebar.checkbox(
     "Enable Auto-Refresh",
-    value=False,
-    help="Automatically refresh data every few minutes"
+    value=True,  # Enabled by default for real-time updates
+    help="Automatically refresh data every few minutes for real-time predictions"
 )
 
 if enable_autorefresh:
@@ -318,18 +318,31 @@ if enable_autorefresh:
         help="How often to auto-refresh data"
     )
 
-    st.sidebar.info(f"⏱️ Auto-refreshing every {refresh_interval} minute(s)")
-
-    # Auto-refresh implementation using native Streamlit
+    # Auto-refresh implementation using streamlit-autorefresh
     import time
 
-    # Try to import streamlit-autorefresh if available
+    # Try to import streamlit-autorefresh
     try:
         from streamlit_autorefresh import st_autorefresh
-        count = st_autorefresh(interval=refresh_interval * 60 * 1000, key="datarefresh")
+
+        # Convert minutes to milliseconds
+        interval_ms = refresh_interval * 60 * 1000
+
+        # Auto-refresh with countdown
+        count = st_autorefresh(interval=interval_ms, key="datarefresh")
+
+        # Show success indicator
+        if count > 0:
+            st.sidebar.success(f"✅ Auto-refresh active (Refresh #{count})")
+        else:
+            st.sidebar.info(f"⏱️ Auto-refreshing every {refresh_interval} minute(s)")
+
     except ImportError:
-        # Fallback: Use st.empty() for manual countdown
+        # Fallback: Use session state for manual countdown
         import datetime
+
+        st.sidebar.warning("⚠️ streamlit-autorefresh not installed. Using fallback mode.")
+        st.sidebar.info(f"⏱️ Target: Refresh every {refresh_interval} minute(s)")
 
         # Initialize session state for last refresh time
         if 'last_refresh' not in st.session_state:
@@ -343,12 +356,25 @@ if enable_autorefresh:
             # Time to refresh
             st.session_state.last_refresh = datetime.datetime.now()
             st.cache_data.clear()
+            st.sidebar.success("🔄 Refreshing now...")
             st.rerun()
         else:
-            # Show countdown
-            st.sidebar.caption(f"Next refresh in: {int(time_until_refresh)}s")
+            # Show countdown with progress bar
+            progress = (refresh_interval * 60 - time_until_refresh) / (refresh_interval * 60)
+            st.sidebar.progress(progress)
+
+            minutes_left = int(time_until_refresh // 60)
+            seconds_left = int(time_until_refresh % 60)
+
+            if minutes_left > 0:
+                st.sidebar.caption(f"⏰ Next refresh in: {minutes_left}m {seconds_left}s")
+            else:
+                st.sidebar.caption(f"⏰ Next refresh in: {seconds_left}s")
+
             time.sleep(1)
             st.rerun()
+else:
+    st.sidebar.caption("💡 Enable auto-refresh for real-time updates")
 
 st.sidebar.caption("💡 Data cached for 30 minutes")
 
@@ -496,14 +522,32 @@ if len(df) < 50:
     st.warning(f"⚠️ Limited data available ({len(df)} days). Technical indicators may not be accurate. Consider selecting a longer time period.")
 
 # Display data freshness information
-st.success(f"""
-✅ **Data Successfully Loaded**
+col_data1, col_data2 = st.columns([3, 1])
 
-- **Data Points:** {len(df)} days
-- **Date Range:** {df['date'].min().strftime('%d %b %Y')} to {df['date'].max().strftime('%d %b %Y')}
-- **Last Updated:** {current_time.strftime('%d %B %Y %H:%M:%S WIB')}
-- **Data Source:** Yahoo Finance
-""")
+with col_data1:
+    st.success(f"""
+    ✅ **Data Successfully Loaded**
+
+    - **Data Points:** {len(df)} days
+    - **Date Range:** {df['date'].min().strftime('%d %b %Y')} to {df['date'].max().strftime('%d %b %Y')}
+    - **Last Updated:** {current_time.strftime('%d %B %Y %H:%M:%S WIB')}
+    - **Data Source:** Yahoo Finance
+    """)
+
+with col_data2:
+    if enable_autorefresh:
+        st.info(f"""
+        🔄 **Real-Time Mode**
+
+        Auto-refresh: ✅ ON
+        Interval: {refresh_interval} min
+        """)
+    else:
+        st.warning("""
+        ⏸️ **Static Mode**
+
+        Auto-refresh: OFF
+        """)
 
 # Get latest data
 latest = df.iloc[-1]
