@@ -22,6 +22,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from models.predictor import get_predictor
 from utils.news_scraper import IndonesianNewsScraper
 from utils.sentiment_analyzer import IndonesianSentimentAnalyzer
+from utils.stock_analyzer import StockMovementAnalyzer
 
 # Page config
 st.set_page_config(
@@ -562,9 +563,10 @@ def initialize_modules():
     predictor = get_predictor()
     news_scraper = IndonesianNewsScraper()
     sentiment_analyzer = IndonesianSentimentAnalyzer()
-    return predictor, news_scraper, sentiment_analyzer
+    stock_analyzer = StockMovementAnalyzer()
+    return predictor, news_scraper, sentiment_analyzer, stock_analyzer
 
-predictor, news_scraper, sentiment_analyzer = initialize_modules()
+predictor, news_scraper, sentiment_analyzer, stock_analyzer = initialize_modules()
 
 # Generate predictions using LSTM or mock
 with st.spinner("🤖 Generating AI predictions..."):
@@ -595,6 +597,10 @@ if sentiment_result and sentiment_result['average_score'] != 0:
 else:
     signal_data['sentiment_signal'] = "NEUTRAL"
     signal_data['sentiment_score'] = 0.0
+
+# Analyze stock movement (why up/down)
+with st.spinner("🔍 Analyzing stock movement patterns..."):
+    movement_analysis = stock_analyzer.analyze_full(df)
 
 # Calculate lot recommendation
 lot_rec = calculate_lot_recommendation(current_price, modal_total, risk_per_trade, stop_loss_pct)
@@ -1041,7 +1047,112 @@ with tab3:
         """)
 
 with tab4:
-    st.subheader("📈 Technical Analysis Summary")
+    st.subheader("🔍 Analisa Pergerakan Saham - Kenapa Naik/Turun?")
+
+    # Overall Analysis Summary
+    st.markdown("---")
+    st.markdown("### 📊 **Kesimpulan Analisa**")
+
+    # Display overall signal with color
+    signal_colors = {
+        "STRONG BUY": "success",
+        "BUY": "success",
+        "HOLD": "warning",
+        "SELL": "error",
+        "STRONG SELL": "error"
+    }
+
+    signal_icons = {
+        "STRONG BUY": "🟢🟢",
+        "BUY": "🟢",
+        "HOLD": "🟡",
+        "SELL": "🔴",
+        "STRONG SELL": "🔴🔴"
+    }
+
+    col1, col2, col3 = st.columns([2, 1, 1])
+
+    with col1:
+        signal_type = signal_colors.get(movement_analysis['overall_signal'], 'info')
+        if signal_type == 'success':
+            st.success(f"{signal_icons[movement_analysis['overall_signal']]} **{movement_analysis['overall_signal']}**")
+        elif signal_type == 'error':
+            st.error(f"{signal_icons[movement_analysis['overall_signal']]} **{movement_analysis['overall_signal']}**")
+        else:
+            st.warning(f"{signal_icons[movement_analysis['overall_signal']]} **{movement_analysis['overall_signal']}**")
+
+        st.caption(movement_analysis['overall_explanation'])
+
+    with col2:
+        st.metric("Total Score", f"{movement_analysis['total_score']}/100",
+                 delta="Good" if movement_analysis['total_score'] > 0 else "Weak",
+                 delta_color="normal" if movement_analysis['total_score'] > 0 else "inverse")
+
+    with col3:
+        st.metric("Signals",
+                 f"{movement_analysis['bullish_count']}🟢 {movement_analysis['bearish_count']}🔴",
+                 delta=f"{movement_analysis['neutral_count']}🟡",
+                 delta_color="off")
+
+    # Score breakdown
+    st.markdown("---")
+    st.markdown("### 📈 **Breakdown Score per Kategori**")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        trend_color = "normal" if movement_analysis['trend_score'] > 0 else "inverse"
+        st.metric("Trend", f"{movement_analysis['trend_score']}",
+                 delta="Bullish" if movement_analysis['trend_score'] > 0 else "Bearish",
+                 delta_color=trend_color)
+
+    with col2:
+        momentum_color = "normal" if movement_analysis['momentum_score'] > 0 else "inverse"
+        st.metric("Momentum", f"{movement_analysis['momentum_score']}",
+                 delta="Positive" if movement_analysis['momentum_score'] > 0 else "Negative",
+                 delta_color=momentum_color)
+
+    with col3:
+        volatility_color = "normal" if movement_analysis['volatility_score'] > 0 else "inverse"
+        st.metric("Volatility", f"{movement_analysis['volatility_score']}",
+                 delta="Favorable" if movement_analysis['volatility_score'] > 0 else "Unfavorable",
+                 delta_color=volatility_color)
+
+    with col4:
+        volume_color = "normal" if movement_analysis['volume_score'] > 0 else "inverse"
+        st.metric("Volume", f"{movement_analysis['volume_score']}",
+                 delta="Strong" if movement_analysis['volume_score'] > 0 else "Weak",
+                 delta_color=volume_color)
+
+    # Detailed Reasons
+    st.markdown("---")
+    st.markdown("### 🔍 **Alasan Detail Kenapa Saham Bergerak**")
+
+    # Bullish Reasons
+    if movement_analysis['bullish_count'] > 0:
+        with st.expander(f"🟢 **Alasan BULLISH (Naik)** - {movement_analysis['bullish_count']} sinyal", expanded=True):
+            for reason in movement_analysis['bullish_reasons']:
+                strength_badge = "🔥" if reason['strength'] == "Very Strong" else "⭐" if reason['strength'] == "Strong" else "•"
+                st.markdown(f"{strength_badge} **{reason['indicator']}** ({reason['strength']})")
+                st.info(reason['explanation'])
+
+    # Bearish Reasons
+    if movement_analysis['bearish_count'] > 0:
+        with st.expander(f"🔴 **Alasan BEARISH (Turun)** - {movement_analysis['bearish_count']} sinyal", expanded=True):
+            for reason in movement_analysis['bearish_reasons']:
+                strength_badge = "🔥" if reason['strength'] == "Very Strong" else "⭐" if reason['strength'] == "Strong" else "•"
+                st.markdown(f"{strength_badge} **{reason['indicator']}** ({reason['strength']})")
+                st.warning(reason['explanation'])
+
+    # Neutral/Other Signals
+    if movement_analysis['neutral_count'] > 0:
+        with st.expander(f"🟡 **Sinyal NETRAL/Kondisi Pasar** - {movement_analysis['neutral_count']} sinyal", expanded=False):
+            for reason in movement_analysis['neutral_reasons']:
+                st.markdown(f"• **{reason['indicator']}** ({reason['strength']})")
+                st.caption(reason['explanation'])
+
+    st.markdown("---")
+    st.subheader("📈 Technical Analysis Summary (Raw Data)")
 
     col1, col2 = st.columns(2)
 
