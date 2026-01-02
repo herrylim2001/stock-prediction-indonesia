@@ -19,8 +19,12 @@ class StockMovementAnalyzer:
         reasons = []
         score = 0  # -100 to +100
 
+        # Check if required columns exist
+        if 'sma_50' not in df.columns or 'sma_20' not in df.columns:
+            return reasons, score
+
         # SMA Analysis
-        if latest['close'] > latest['sma_50']:
+        if pd.notna(latest.get('sma_50')) and latest['close'] > latest['sma_50']:
             reasons.append({
                 'indicator': 'SMA 50',
                 'signal': 'BULLISH',
@@ -338,11 +342,30 @@ class StockMovementAnalyzer:
     def analyze_full(self, df):
         """Complete analysis of stock movement"""
 
-        # Analyze all aspects
-        trend_reasons, trend_score = self.analyze_trend(df)
-        momentum_reasons, momentum_score = self.analyze_momentum(df)
-        volatility_reasons, volatility_score = self.analyze_volatility(df)
-        volume_reasons, volume_score = self.analyze_volume(df)
+        try:
+            # Analyze all aspects
+            trend_reasons, trend_score = self.analyze_trend(df)
+            momentum_reasons, momentum_score = self.analyze_momentum(df)
+            volatility_reasons, volatility_score = self.analyze_volatility(df)
+            volume_reasons, volume_score = self.analyze_volume(df)
+        except Exception as e:
+            # Return safe default if analysis fails
+            return {
+                'overall_signal': 'HOLD',
+                'overall_explanation': f'Tidak dapat menganalisa: {str(e)}',
+                'total_score': 0,
+                'trend_score': 0,
+                'momentum_score': 0,
+                'volatility_score': 0,
+                'volume_score': 0,
+                'all_reasons': [],
+                'bullish_reasons': [],
+                'bearish_reasons': [],
+                'neutral_reasons': [],
+                'bullish_count': 0,
+                'bearish_count': 0,
+                'neutral_count': 0
+            }
 
         # Combine all reasons
         all_reasons = trend_reasons + momentum_reasons + volatility_reasons + volume_reasons

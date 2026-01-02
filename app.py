@@ -95,6 +95,7 @@ def calculate_technical_indicators(df):
     if df is None or len(df) < 50:
         # Add NaN columns for missing indicators
         df['sma_10'] = np.nan
+        df['sma_20'] = np.nan
         df['sma_50'] = np.nan
         df['ema_12'] = np.nan
         df['ema_26'] = np.nan
@@ -105,12 +106,19 @@ def calculate_technical_indicators(df):
         df['bb_upper'] = df['close'] * 1.02
         df['bb_middle'] = df['close']
         df['bb_lower'] = df['close'] * 0.98
+        df['bb_width'] = 0.04
         df['atr'] = df['close'] * 0.01
+        df['stoch_k'] = 50.0
+        df['stoch_d'] = 50.0
+        df['obv'] = 0.0
+        df['volume_sma'] = df['volume'].mean() if 'volume' in df.columns else 1000000
+        df['volume_ratio'] = 1.0
         return df
 
     try:
         # Moving Averages
         df['sma_10'] = SMAIndicator(df['close'], window=10).sma_indicator()
+        df['sma_20'] = SMAIndicator(df['close'], window=20).sma_indicator()
         df['sma_50'] = SMAIndicator(df['close'], window=50).sma_indicator()
         df['ema_12'] = EMAIndicator(df['close'], window=12).ema_indicator()
         df['ema_26'] = EMAIndicator(df['close'], window=26).ema_indicator()
@@ -129,14 +137,48 @@ def calculate_technical_indicators(df):
         df['bb_upper'] = bb.bollinger_hband()
         df['bb_middle'] = bb.bollinger_mavg()
         df['bb_lower'] = bb.bollinger_lband()
+        df['bb_width'] = (df['bb_upper'] - df['bb_lower']) / df['bb_middle']
 
         # ATR
         df['atr'] = AverageTrueRange(df['high'], df['low'], df['close'], window=14).average_true_range()
+
+        # Stochastic Oscillator
+        stoch = StochasticOscillator(df['high'], df['low'], df['close'], window=14, smooth_window=3)
+        df['stoch_k'] = stoch.stoch()
+        df['stoch_d'] = stoch.stoch_signal()
+
+        # Volume indicators
+        if 'volume' in df.columns:
+            from ta.volume import OnBalanceVolumeIndicator
+            df['obv'] = OnBalanceVolumeIndicator(df['close'], df['volume']).on_balance_volume()
+            df['volume_sma'] = df['volume'].rolling(window=20).mean()
+            df['volume_ratio'] = df['volume'] / df['volume_sma']
+        else:
+            df['obv'] = 0.0
+            df['volume_sma'] = 1000000
+            df['volume_ratio'] = 1.0
+
     except Exception as e:
         st.warning(f"Could not calculate some technical indicators: {e}")
         # Fill with defaults if calculation fails
         if 'rsi' not in df.columns:
             df['rsi'] = 50.0
+        if 'sma_20' not in df.columns:
+            df['sma_20'] = df['close']
+        if 'sma_50' not in df.columns:
+            df['sma_50'] = df['close']
+        if 'bb_width' not in df.columns:
+            df['bb_width'] = 0.04
+        if 'stoch_k' not in df.columns:
+            df['stoch_k'] = 50.0
+        if 'stoch_d' not in df.columns:
+            df['stoch_d'] = 50.0
+        if 'obv' not in df.columns:
+            df['obv'] = 0.0
+        if 'volume_sma' not in df.columns:
+            df['volume_sma'] = df.get('volume', pd.Series([1000000])).mean()
+        if 'volume_ratio' not in df.columns:
+            df['volume_ratio'] = 1.0
 
     return df
 
