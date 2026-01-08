@@ -23,6 +23,7 @@ from models.predictor import get_predictor
 from utils.news_scraper import IndonesianNewsScraper
 from utils.sentiment_analyzer import IndonesianSentimentAnalyzer
 from utils.stock_analyzer import StockMovementAnalyzer
+from utils.market_analyzer import get_market_analyzer
 
 # Page config
 st.set_page_config(
@@ -606,9 +607,10 @@ def initialize_modules():
     news_scraper = IndonesianNewsScraper()
     sentiment_analyzer = IndonesianSentimentAnalyzer()
     stock_analyzer = StockMovementAnalyzer()
-    return predictor, news_scraper, sentiment_analyzer, stock_analyzer
+    market_analyzer = get_market_analyzer()
+    return predictor, news_scraper, sentiment_analyzer, stock_analyzer, market_analyzer
 
-predictor, news_scraper, sentiment_analyzer, stock_analyzer = initialize_modules()
+predictor, news_scraper, sentiment_analyzer, stock_analyzer, market_analyzer = initialize_modules()
 
 # Generate predictions using LSTM or mock
 with st.spinner("🤖 Generating AI predictions..."):
@@ -643,6 +645,11 @@ else:
 # Analyze stock movement (why up/down)
 with st.spinner("🔍 Analyzing stock movement patterns..."):
     movement_analysis = stock_analyzer.analyze_full(df)
+
+# Analyze market context (IHSG, beta, regime)
+with st.spinner("📊 Analyzing IHSG correlation & market regime..."):
+    market_context = market_analyzer.get_market_context(df)
+    sector_info = market_analyzer.get_sector_classification(selected_stock)
 
 # Calculate lot recommendation
 lot_rec = calculate_lot_recommendation(current_price, modal_total, risk_per_trade, stop_loss_pct)
@@ -683,6 +690,97 @@ with col5:
         f"{lot_rec['lots']} lot",
         f"{lot_rec['shares']:,} shares"
     )
+
+st.markdown("---")
+
+# Market Context Section (IHSG, Beta, Sector)
+st.subheader("🌐 Market Context & Stock Classification")
+
+col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+
+with col_m1:
+    # Market Regime
+    regime = market_context['regime']
+    regime_icon = "🐂" if "BULL" in regime['regime'] else "🐻" if "BEAR" in regime['regime'] else "↔️"
+    regime_color = "normal" if "BULL" in regime['regime'] else "inverse" if "BEAR" in regime['regime'] else "off"
+
+    st.metric(
+        "📊 IHSG Regime",
+        f"{regime_icon} {regime['regime']}",
+        delta=f"Conf: {regime['confidence']}%",
+        delta_color=regime_color
+    )
+    st.caption(f"IHSG: {regime['ihsg_price']:,.2f}")
+
+with col_m2:
+    # Beta
+    beta = market_context['beta']
+    beta_icon = "🔥" if beta['beta'] > 1.5 else "⚡" if beta['beta'] > 1.0 else "🛡️" if beta['beta'] < 0.8 else "📊"
+
+    st.metric(
+        f"{beta_icon} Beta (vs IHSG)",
+        f"{beta['beta']:.3f}",
+        delta=f"Corr: {beta['correlation']:.2f}",
+        delta_color="off"
+    )
+    st.caption(f"Risk: {beta['interpretation'].split('-')[0].strip()}")
+
+with col_m3:
+    # Sector
+    st.metric(
+        "🏢 Sector",
+        sector_info['sector'],
+        delta=sector_info['category'],
+        delta_color="off"
+    )
+    st.caption(f"Sub: {sector_info['sub_sector']}")
+
+with col_m4:
+    # IHSG Return
+    st.metric(
+        "📈 IHSG Return",
+        f"{regime['return_20d']:+.2f}%",
+        delta=f"50D: {regime['return_50d']:+.2f}%",
+        delta_color="normal" if regime['return_20d'] > 0 else "inverse"
+    )
+    st.caption(f"Vol: {regime['volatility']:.1f}%")
+
+# Detailed explanation in expander
+with st.expander("ℹ️ **Penjelasan Market Context**"):
+    st.markdown(f"""
+    ### 📊 **Market Regime: {regime['regime']}**
+    {regime['explanation']}
+    - **Confidence:** {regime['confidence']}%
+    - **Trend Strength:** {regime['trend_strength']}/11
+    - **Volatility:** {regime['volatility']:.2f}% (annualized)
+
+    ### {beta_icon} **Beta Analysis: {beta['beta']:.3f}**
+    {beta['interpretation']}
+    - **Correlation with IHSG:** {beta['correlation']:.3f} ({abs(beta['correlation'])*100:.1f}%)
+    - **Reliability:** {beta['reliability']} (based on {beta['data_points']} data points)
+    - **Interpretation:**
+      - Beta > 1.0 = Lebih volatile dari IHSG (high risk/reward)
+      - Beta = 1.0 = Sejalan dengan IHSG
+      - Beta < 1.0 = Kurang volatile dari IHSG (defensive)
+
+    ### 🏢 **Sector: {sector_info['sector']}**
+    - **Sub-sector:** {sector_info['sub_sector']}
+    - **Category:** {sector_info['category']}
+    - **Characteristic:**
+      {
+        'Blue Chip: Saham unggulan dengan likuiditas tinggi dan fundamental kuat' if sector_info['category'] == 'Blue Chip'
+        else 'Second Liner: Saham lapis kedua dengan potensi pertumbuhan' if sector_info['category'] == 'Second Liner'
+        else 'Growth: Saham growth dengan volatilitas tinggi' if sector_info['category'] == 'Growth'
+        else 'Commodity: Dipengaruhi harga komoditas global' if sector_info['category'] == 'Commodity'
+        else 'State-Owned: BUMN dengan stabilitas relatif'
+      }
+
+    ### 💡 **Trading Implication:**
+    {"- IHSG bullish + High beta = Potensi gain lebih besar dari IHSG" if "BULL" in regime['regime'] and beta['beta'] > 1.2
+     else "- IHSG bearish + High beta = Risk lebih tinggi, waspadai penurunan tajam" if "BEAR" in regime['regime'] and beta['beta'] > 1.2
+     else "- IHSG sideways + Low beta = Relatif stabil, cocok untuk defensive play" if regime['regime'] == "SIDEWAYS" and beta['beta'] < 0.8
+     else "- Market condition normal, ikuti technical analysis"}
+    """)
 
 st.markdown("---")
 
