@@ -49,86 +49,132 @@ class MarketAnalyzer:
         Beta = Cov(Stock, IHSG) / Var(IHSG)
 
         Args:
-            stock_df: Stock dataframe with 'returns' column
+            stock_df: Stock dataframe with 'date' and 'close' columns
             ihsg_df: IHSG dataframe (optional, will fetch if None)
 
         Returns:
             dict with beta and interpretation
         """
-        if ihsg_df is None:
-            ihsg_df = self.ihsg_data if self.ihsg_data is not None else self.fetch_ihsg()
+        try:
+            if ihsg_df is None:
+                ihsg_df = self.ihsg_data if self.ihsg_data is not None else self.fetch_ihsg()
 
-        if ihsg_df is None or len(ihsg_df) < 30:
+            if ihsg_df is None or len(ihsg_df) < 30:
+                return {
+                    'beta': 1.0,
+                    'correlation': 0.0,
+                    'interpretation': 'Data insufficient',
+                    'reliability': 'Low',
+                    'data_points': 0
+                }
+
+            # Check if required columns exist
+            if 'date' not in stock_df.columns or 'close' not in stock_df.columns:
+                return {
+                    'beta': 1.0,
+                    'correlation': 0.0,
+                    'interpretation': 'Required columns missing',
+                    'reliability': 'Low',
+                    'data_points': 0
+                }
+
+            # Make a copy and ensure returns column exists
+            stock_df = stock_df.copy()
+
+            # Calculate returns if not exists
+            if 'returns' not in stock_df.columns:
+                stock_df['returns'] = stock_df['close'].pct_change()
+
+            # Ensure IHSG has returns column
+            ihsg_df = ihsg_df.copy()
+            if 'returns' not in ihsg_df.columns:
+                ihsg_df['returns'] = ihsg_df['close'].pct_change()
+
+            # Ensure date column is datetime
+            if 'date' in stock_df.columns:
+                stock_df['date'] = pd.to_datetime(stock_df['date']).dt.date
+            if 'date' in ihsg_df.columns:
+                ihsg_df['date'] = pd.to_datetime(ihsg_df['date']).dt.date
+
+            # Check if we have the columns we need
+            if 'date' not in stock_df.columns or 'returns' not in stock_df.columns:
+                return {
+                    'beta': 1.0,
+                    'correlation': 0.0,
+                    'interpretation': 'Cannot calculate - missing data',
+                    'reliability': 'Low',
+                    'data_points': 0
+                }
+
+            # Merge on date
+            merged = pd.merge(
+                stock_df[['date', 'returns']],
+                ihsg_df[['date', 'returns']],
+                on='date',
+                suffixes=('_stock', '_ihsg')
+            )
+
+            # Remove NaN
+            merged = merged.dropna()
+
+            if len(merged) < 30:
+                return {
+                    'beta': 1.0,
+                    'correlation': 0.0,
+                    'interpretation': 'Insufficient overlapping data',
+                    'reliability': 'Low',
+                    'data_points': len(merged)
+                }
+
+            # Calculate beta
+            covariance = merged['returns_stock'].cov(merged['returns_ihsg'])
+            variance = merged['returns_ihsg'].var()
+
+            if variance == 0:
+                beta = 1.0
+            else:
+                beta = covariance / variance
+
+            # Calculate correlation
+            correlation = merged['returns_stock'].corr(merged['returns_ihsg'])
+
+            # Interpretation
+            if beta > 1.5:
+                interpretation = "Very High Risk - Bergerak 50%+ lebih volatile dari IHSG"
+            elif beta > 1.2:
+                interpretation = "High Risk - Lebih volatile dari IHSG"
+            elif beta > 0.8:
+                interpretation = "Medium Risk - Sejalan dengan IHSG"
+            elif beta > 0.5:
+                interpretation = "Low Risk - Kurang volatile dari IHSG"
+            else:
+                interpretation = "Very Low Risk / Defensive - Pergerakan independent dari IHSG"
+
+            # Reliability based on correlation
+            if abs(correlation) > 0.7:
+                reliability = "High"
+            elif abs(correlation) > 0.4:
+                reliability = "Medium"
+            else:
+                reliability = "Low"
+
             return {
-                'beta': 1.0,
-                'interpretation': 'Data insufficient',
-                'reliability': 'Low'
+                'beta': round(beta, 3),
+                'correlation': round(correlation, 3),
+                'interpretation': interpretation,
+                'reliability': reliability,
+                'data_points': len(merged)
             }
 
-        # Align dates
-        stock_df = stock_df.copy()
-        if 'date' in stock_df.columns:
-            stock_df['date'] = pd.to_datetime(stock_df['date']).dt.date
-        if 'date' in ihsg_df.columns:
-            ihsg_df['date'] = pd.to_datetime(ihsg_df['date']).dt.date
-
-        # Merge on date
-        merged = pd.merge(
-            stock_df[['date', 'returns']],
-            ihsg_df[['date', 'returns']],
-            on='date',
-            suffixes=('_stock', '_ihsg')
-        )
-
-        # Remove NaN
-        merged = merged.dropna()
-
-        if len(merged) < 30:
+        except Exception as e:
+            # Return safe default if any error
             return {
                 'beta': 1.0,
-                'interpretation': 'Insufficient overlapping data',
-                'reliability': 'Low'
+                'correlation': 0.0,
+                'interpretation': f'Calculation error: {str(e)}',
+                'reliability': 'Low',
+                'data_points': 0
             }
-
-        # Calculate beta
-        covariance = merged['returns_stock'].cov(merged['returns_ihsg'])
-        variance = merged['returns_ihsg'].var()
-
-        if variance == 0:
-            beta = 1.0
-        else:
-            beta = covariance / variance
-
-        # Calculate correlation
-        correlation = merged['returns_stock'].corr(merged['returns_ihsg'])
-
-        # Interpretation
-        if beta > 1.5:
-            interpretation = "Very High Risk - Bergerak 50%+ lebih volatile dari IHSG"
-        elif beta > 1.2:
-            interpretation = "High Risk - Lebih volatile dari IHSG"
-        elif beta > 0.8:
-            interpretation = "Medium Risk - Sejalan dengan IHSG"
-        elif beta > 0.5:
-            interpretation = "Low Risk - Kurang volatile dari IHSG"
-        else:
-            interpretation = "Very Low Risk / Defensive - Pergerakan independent dari IHSG"
-
-        # Reliability based on correlation
-        if abs(correlation) > 0.7:
-            reliability = "High"
-        elif abs(correlation) > 0.4:
-            reliability = "Medium"
-        else:
-            reliability = "Low"
-
-        return {
-            'beta': round(beta, 3),
-            'correlation': round(correlation, 3),
-            'interpretation': interpretation,
-            'reliability': reliability,
-            'data_points': len(merged)
-        }
 
     def detect_market_regime(self, ihsg_df=None):
         """
