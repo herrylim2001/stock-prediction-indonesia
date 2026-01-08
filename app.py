@@ -184,38 +184,164 @@ def calculate_technical_indicators(df):
 
     return df
 
-def generate_mock_predictions(current_price, volatility=0.02):
-    """Generate mock predictions (placeholder for LSTM model)"""
-    # Simulate predictions with some random walk
-    trend = np.random.choice([-1, 0, 1], p=[0.3, 0.2, 0.5])  # Slight bullish bias
+def generate_technical_predictions(df, current_price, volatility=0.02):
+    """
+    Generate predictions based on technical analysis and momentum
+    More accurate than random predictions
+    """
+    if df is None or len(df) < 20:
+        # Fallback to neutral predictions if insufficient data
+        return {
+            "1h": {"price": current_price, "confidence": 0.50, "trend": "NEUTRAL"},
+            "4h": {"price": current_price, "confidence": 0.50, "trend": "NEUTRAL"},
+            "1d": {"price": current_price, "confidence": 0.50, "trend": "NEUTRAL"},
+            "3d": {"price": current_price, "confidence": 0.50, "trend": "NEUTRAL"}
+        }
 
+    latest = df.iloc[-1]
+
+    # Calculate momentum score (-100 to +100)
+    momentum_score = 0
+    confidence_factors = []
+
+    # 1. RSI momentum
+    rsi = latest.get('rsi', 50)
+    if pd.notna(rsi):
+        if rsi < 30:
+            momentum_score += 25
+            confidence_factors.append(0.8)
+        elif rsi < 40:
+            momentum_score += 15
+            confidence_factors.append(0.7)
+        elif rsi > 70:
+            momentum_score -= 25
+            confidence_factors.append(0.8)
+        elif rsi > 60:
+            momentum_score -= 15
+            confidence_factors.append(0.7)
+        else:
+            confidence_factors.append(0.6)
+
+    # 2. MACD momentum
+    macd = latest.get('macd', 0)
+    macd_signal = latest.get('macd_signal', 0)
+    if pd.notna(macd) and pd.notna(macd_signal):
+        macd_diff = macd - macd_signal
+        if macd_diff > 0:
+            momentum_score += 15
+            confidence_factors.append(0.75)
+        else:
+            momentum_score -= 15
+            confidence_factors.append(0.75)
+
+    # 3. Moving Average trend
+    sma_20 = latest.get('sma_20', current_price)
+    sma_50 = latest.get('sma_50', current_price)
+    if pd.notna(sma_20) and pd.notna(sma_50):
+        if current_price > sma_20 > sma_50:
+            momentum_score += 20
+            confidence_factors.append(0.8)
+        elif current_price < sma_20 < sma_50:
+            momentum_score -= 20
+            confidence_factors.append(0.8)
+        elif current_price > sma_20:
+            momentum_score += 10
+            confidence_factors.append(0.65)
+        else:
+            momentum_score -= 10
+            confidence_factors.append(0.65)
+
+    # 4. Bollinger Bands position
+    bb_upper = latest.get('bb_upper', current_price * 1.02)
+    bb_lower = latest.get('bb_lower', current_price * 0.98)
+    bb_middle = latest.get('bb_middle', current_price)
+    if pd.notna(bb_upper) and pd.notna(bb_lower):
+        bb_position = (current_price - bb_lower) / (bb_upper - bb_lower)
+        if bb_position < 0.2:
+            momentum_score += 15
+            confidence_factors.append(0.75)
+        elif bb_position > 0.8:
+            momentum_score -= 15
+            confidence_factors.append(0.75)
+
+    # 5. Volume trend
+    volume_ratio = latest.get('volume_ratio', 1.0)
+    if pd.notna(volume_ratio):
+        if volume_ratio > 1.5:
+            # High volume confirms trend
+            confidence_factors.append(0.85)
+        elif volume_ratio < 0.7:
+            # Low volume reduces confidence
+            confidence_factors.append(0.55)
+        else:
+            confidence_factors.append(0.65)
+
+    # 6. Recent price momentum
+    if len(df) >= 5:
+        price_5d_ago = df.iloc[-5]['close']
+        momentum_5d = ((current_price - price_5d_ago) / price_5d_ago) * 100
+        if momentum_5d > 5:
+            momentum_score += 15
+        elif momentum_5d < -5:
+            momentum_score -= 15
+
+    # Normalize momentum score to -1 to +1
+    normalized_momentum = np.clip(momentum_score / 100, -1, 1)
+
+    # Calculate base confidence
+    base_confidence = np.mean(confidence_factors) if confidence_factors else 0.60
+
+    # Determine trend
+    if normalized_momentum > 0.3:
+        trend = "UP"
+    elif normalized_momentum < -0.3:
+        trend = "DOWN"
+    else:
+        trend = "NEUTRAL"
+
+    # Calculate ATR for volatility adjustment
+    atr = latest.get('atr', current_price * 0.01)
+    if pd.notna(atr):
+        atr_pct = atr / current_price
+    else:
+        atr_pct = volatility
+
+    # Generate predictions with momentum-based adjustments
     predictions = {
         "1h": {
-            "price": current_price * (1 + np.random.normal(0.001 * trend, volatility * 0.3)),
-            "confidence": np.random.uniform(0.65, 0.75),
-            "trend": "UP" if trend > 0 else "DOWN" if trend < 0 else "NEUTRAL"
+            "price": current_price * (1 + normalized_momentum * 0.003 + np.random.normal(0, atr_pct * 0.2)),
+            "confidence": base_confidence * 0.9,  # Lower confidence for short term
+            "trend": trend if abs(normalized_momentum) > 0.15 else "NEUTRAL"
         },
         "4h": {
-            "price": current_price * (1 + np.random.normal(0.005 * trend, volatility * 0.5)),
-            "confidence": np.random.uniform(0.63, 0.73),
-            "trend": "UP" if trend > 0 else "DOWN" if trend < 0 else "NEUTRAL"
+            "price": current_price * (1 + normalized_momentum * 0.008 + np.random.normal(0, atr_pct * 0.4)),
+            "confidence": base_confidence * 0.95,
+            "trend": trend if abs(normalized_momentum) > 0.2 else "NEUTRAL"
         },
         "1d": {
-            "price": current_price * (1 + np.random.normal(0.01 * trend, volatility)),
-            "confidence": np.random.uniform(0.68, 0.78),
-            "trend": "UP" if trend > 0 else "DOWN" if trend < 0 else "NEUTRAL"
+            "price": current_price * (1 + normalized_momentum * 0.015 + np.random.normal(0, atr_pct * 0.6)),
+            "confidence": base_confidence,
+            "trend": trend
         },
         "3d": {
-            "price": current_price * (1 + np.random.normal(0.03 * trend, volatility * 1.5)),
-            "confidence": np.random.uniform(0.60, 0.72),
-            "trend": "UP" if trend > 0 else "DOWN" if trend < 0 else "NEUTRAL"
+            "price": current_price * (1 + normalized_momentum * 0.035 + np.random.normal(0, atr_pct * 1.0)),
+            "confidence": base_confidence * 0.85,  # Lower confidence for longer term
+            "trend": trend if abs(normalized_momentum) > 0.25 else "NEUTRAL"
         }
     }
 
+    # Ensure confidence is in valid range
+    for timeframe in predictions:
+        predictions[timeframe]['confidence'] = np.clip(predictions[timeframe]['confidence'], 0.5, 0.9)
+        predictions[timeframe]['momentum_score'] = momentum_score
+
     return predictions
 
-def generate_trading_signal(df, predictions):
-    """Generate trading signal based on technical indicators and predictions"""
+def generate_trading_signal(df, predictions, bandar_analysis=None):
+    """
+    Generate trading signal based on technical indicators, predictions, and bandar patterns
+    Integrates multiple signal sources for more accurate recommendations
+    """
     if df is None or len(df) < 2:
         return {"signal": "HOLD", "strength": 0, "reasons": ["Insufficient data"], "score": 0}
 
@@ -224,77 +350,243 @@ def generate_trading_signal(df, predictions):
     score = 0
     reasons = []
 
-    # RSI signals (check for valid value)
+    # === BANDAR PATTERN ANALYSIS (HIGHEST WEIGHT) ===
+    if bandar_analysis:
+        dominant_phase = bandar_analysis.get('dominant_phase', 'NONE')
+        dominant_conf = bandar_analysis.get('dominant_confidence', 0)
+
+        if dominant_phase == "ACCUMULATION" and dominant_conf >= 60:
+            score += 4  # Strong buy signal
+            signals.append("BUY")
+            reasons.append(f"🎯 BANDAR ACCUMULATION ({dominant_conf:.0f}% confidence)")
+        elif dominant_phase == "MARKUP" and dominant_conf >= 70:
+            score += 3  # Buy signal but risky
+            signals.append("BUY")
+            reasons.append(f"🔥 BANDAR MARKUP - Ride the wave ({dominant_conf:.0f}%)")
+        elif dominant_phase == "DISTRIBUTION" and dominant_conf >= 60:
+            score -= 5  # Strong sell signal
+            signals.append("SELL")
+            reasons.append(f"⚠️ BANDAR DISTRIBUTION - EXIT NOW ({dominant_conf:.0f}%)")
+
+        # Check individual phase warnings
+        distribution = bandar_analysis.get('distribution', {})
+        if distribution.get('detected') and distribution.get('confidence', 0) >= 70:
+            score -= 2  # Additional penalty for strong distribution
+            reasons.append(f"Distribution detected: {distribution.get('confidence', 0):.0f}%")
+
+    # === RSI SIGNALS ===
     if pd.notna(latest.get('rsi', np.nan)):
-        if latest['rsi'] < 30:
+        rsi = latest['rsi']
+        if rsi < 30:
             score += 2
             signals.append("BUY")
-            reasons.append("RSI oversold (<30)")
-        elif latest['rsi'] > 70:
+            reasons.append(f"RSI oversold ({rsi:.0f})")
+        elif rsi < 40:
+            score += 1
+            reasons.append(f"RSI weak ({rsi:.0f})")
+        elif rsi > 70:
             score -= 2
             signals.append("SELL")
-            reasons.append("RSI overbought (>70)")
+            reasons.append(f"RSI overbought ({rsi:.0f})")
+        elif rsi > 60:
+            score -= 1
+            reasons.append(f"RSI strong ({rsi:.0f})")
 
-    # MACD signals (check for valid values)
+    # === MACD SIGNALS ===
     if pd.notna(latest.get('macd', np.nan)) and pd.notna(latest.get('macd_signal', np.nan)):
-        if latest['macd'] > latest['macd_signal']:
+        macd_diff = latest['macd'] - latest['macd_signal']
+        if macd_diff > 0:
             score += 1
             signals.append("BUY")
-            reasons.append("MACD bullish crossover")
+            reasons.append("MACD bullish")
         else:
             score -= 1
             signals.append("SELL")
-            reasons.append("MACD bearish crossover")
+            reasons.append("MACD bearish")
 
-    # Moving Average signals (check for valid values)
-    if pd.notna(latest.get('sma_50', np.nan)):
-        if latest['close'] > latest['sma_50']:
-            score += 1
+    # === MOVING AVERAGE TREND ===
+    if pd.notna(latest.get('sma_20', np.nan)) and pd.notna(latest.get('sma_50', np.nan)):
+        if latest['close'] > latest['sma_20'] > latest['sma_50']:
+            score += 2
             signals.append("BUY")
+            reasons.append("Strong uptrend (MA alignment)")
+        elif latest['close'] < latest['sma_20'] < latest['sma_50']:
+            score -= 2
+            signals.append("SELL")
+            reasons.append("Strong downtrend (MA alignment)")
+        elif latest['close'] > latest['sma_50']:
+            score += 1
             reasons.append("Price above SMA50")
         else:
             score -= 1
-            signals.append("SELL")
             reasons.append("Price below SMA50")
 
-    # Bollinger Bands (check for valid values)
+    # === BOLLINGER BANDS ===
     if pd.notna(latest.get('bb_lower', np.nan)) and pd.notna(latest.get('bb_upper', np.nan)):
-        if latest['close'] < latest['bb_lower']:
-            score += 1
+        bb_position = (latest['close'] - latest['bb_lower']) / (latest['bb_upper'] - latest['bb_lower'])
+        if bb_position < 0.1:
+            score += 2
             signals.append("BUY")
-            reasons.append("Price at lower Bollinger Band")
-        elif latest['close'] > latest['bb_upper']:
-            score -= 1
+            reasons.append("Price at BB lower band")
+        elif bb_position > 0.9:
+            score -= 2
             signals.append("SELL")
-            reasons.append("Price at upper Bollinger Band")
+            reasons.append("Price at BB upper band")
 
-    # Prediction trend
-    if predictions.get('1d', {}).get('trend') == "UP":
-        score += 1
+    # === VOLUME CONFIRMATION ===
+    volume_ratio = latest.get('volume_ratio', 1.0)
+    if pd.notna(volume_ratio):
+        if volume_ratio > 1.5:
+            # High volume confirms the trend
+            if score > 0:
+                score += 1
+                reasons.append(f"High volume confirms trend ({volume_ratio:.1f}x)")
+            elif score < 0:
+                score -= 1
+                reasons.append(f"High volume confirms downtrend ({volume_ratio:.1f}x)")
+
+    # === PREDICTION TREND ===
+    pred_1d = predictions.get('1d', {})
+    pred_trend = pred_1d.get('trend', 'NEUTRAL')
+    pred_conf = pred_1d.get('confidence', 0.5)
+
+    if pred_trend == "UP" and pred_conf > 0.7:
+        score += 2
         signals.append("BUY")
-        reasons.append("1d prediction bullish")
-    elif predictions.get('1d', {}).get('trend') == "DOWN":
-        score -= 1
+        reasons.append(f"Strong bullish prediction ({pred_conf*100:.0f}%)")
+    elif pred_trend == "UP":
+        score += 1
+        reasons.append("Bullish prediction")
+    elif pred_trend == "DOWN" and pred_conf > 0.7:
+        score -= 2
         signals.append("SELL")
-        reasons.append("1d prediction bearish")
+        reasons.append(f"Strong bearish prediction ({pred_conf*100:.0f}%)")
+    elif pred_trend == "DOWN":
+        score -= 1
+        reasons.append("Bearish prediction")
 
-    # Determine final signal
-    if score >= 3:
+    # === MOMENTUM SCORE ===
+    momentum_score = pred_1d.get('momentum_score', 0)
+    if momentum_score > 50:
+        reasons.append(f"Strong bullish momentum ({momentum_score:.0f})")
+    elif momentum_score < -50:
+        reasons.append(f"Strong bearish momentum ({momentum_score:.0f})")
+
+    # === DETERMINE FINAL SIGNAL ===
+    if score >= 5:
         signal = "STRONG BUY"
-    elif score >= 1:
+        strength = min(100, score * 15)
+    elif score >= 2:
         signal = "BUY"
-    elif score <= -3:
+        strength = min(90, score * 20)
+    elif score >= 1:
+        signal = "WEAK BUY"
+        strength = min(70, score * 25)
+    elif score <= -5:
         signal = "STRONG SELL"
-    elif score <= -1:
+        strength = min(100, abs(score) * 15)
+    elif score <= -2:
         signal = "SELL"
+        strength = min(90, abs(score) * 20)
+    elif score <= -1:
+        signal = "WEAK SELL"
+        strength = min(70, abs(score) * 25)
     else:
         signal = "HOLD"
+        strength = 50
 
     return {
         "signal": signal,
         "score": score,
-        "strength": min(abs(score) * 20, 100),
-        "reasons": reasons[:3]  # Top 3 reasons
+        "strength": strength,
+        "reasons": reasons[:5]  # Top 5 reasons
+    }
+
+def detect_support_resistance(df, n_levels=3):
+    """
+    Detect support and resistance levels using pivot points and volume
+    Returns key price levels for trading decisions
+    """
+    if df is None or len(df) < 20:
+        return {"support": [], "resistance": [], "pivot": None}
+
+    # Calculate pivot points from recent highs and lows
+    recent_df = df.tail(60)  # Last 60 periods
+
+    # Find local maxima (resistance)
+    resistance_candidates = []
+    for i in range(2, len(recent_df) - 2):
+        if (recent_df.iloc[i]['high'] > recent_df.iloc[i-1]['high'] and
+            recent_df.iloc[i]['high'] > recent_df.iloc[i-2]['high'] and
+            recent_df.iloc[i]['high'] > recent_df.iloc[i+1]['high'] and
+            recent_df.iloc[i]['high'] > recent_df.iloc[i+2]['high']):
+            resistance_candidates.append({
+                'price': recent_df.iloc[i]['high'],
+                'volume': recent_df.iloc[i]['volume'],
+                'date': recent_df.iloc[i]['date']
+            })
+
+    # Find local minima (support)
+    support_candidates = []
+    for i in range(2, len(recent_df) - 2):
+        if (recent_df.iloc[i]['low'] < recent_df.iloc[i-1]['low'] and
+            recent_df.iloc[i]['low'] < recent_df.iloc[i-2]['low'] and
+            recent_df.iloc[i]['low'] < recent_df.iloc[i+1]['low'] and
+            recent_df.iloc[i]['low'] < recent_df.iloc[i+2]['low']):
+            support_candidates.append({
+                'price': recent_df.iloc[i]['low'],
+                'volume': recent_df.iloc[i]['volume'],
+                'date': recent_df.iloc[i]['date']
+            })
+
+    # Cluster similar levels (within 2% of each other)
+    def cluster_levels(levels, tolerance=0.02):
+        if not levels:
+            return []
+
+        sorted_levels = sorted(levels, key=lambda x: x['price'])
+        clusters = []
+        current_cluster = [sorted_levels[0]]
+
+        for level in sorted_levels[1:]:
+            if abs(level['price'] - current_cluster[0]['price']) / current_cluster[0]['price'] < tolerance:
+                current_cluster.append(level)
+            else:
+                clusters.append(current_cluster)
+                current_cluster = [level]
+
+        clusters.append(current_cluster)
+
+        # Get weighted average for each cluster (weighted by volume)
+        final_levels = []
+        for cluster in clusters:
+            total_volume = sum(l['volume'] for l in cluster)
+            weighted_price = sum(l['price'] * l['volume'] for l in cluster) / total_volume
+            strength = len(cluster) * (total_volume / recent_df['volume'].mean())
+            final_levels.append({
+                'price': weighted_price,
+                'strength': strength,
+                'touches': len(cluster)
+            })
+
+        return sorted(final_levels, key=lambda x: x['strength'], reverse=True)
+
+    resistance_levels = cluster_levels(resistance_candidates)[:n_levels]
+    support_levels = cluster_levels(support_candidates)[:n_levels]
+
+    # Calculate pivot point (traditional)
+    latest = df.iloc[-1]
+    pivot = (latest['high'] + latest['low'] + latest['close']) / 3
+
+    # Sort by price
+    resistance_levels = sorted(resistance_levels, key=lambda x: x['price'], reverse=True)
+    support_levels = sorted(support_levels, key=lambda x: x['price'], reverse=True)
+
+    return {
+        'support': support_levels,
+        'resistance': resistance_levels,
+        'pivot': pivot,
+        'current_price': latest['close']
     }
 
 def calculate_lot_recommendation(current_price, modal_total, risk_per_trade, stop_loss_pct):
@@ -614,9 +906,38 @@ def initialize_modules():
 
 predictor, news_scraper, sentiment_analyzer, stock_analyzer, market_analyzer, bandar_detector = initialize_modules()
 
-# Generate predictions using LSTM or mock
+# === ANALYSIS PHASE ===
+# Detect bandar patterns first (needed for trading signal)
+with st.spinner("🔍 Detecting bandar accumulation/distribution patterns..."):
+    bandar_analysis = bandar_detector.analyze_full(df)
+
+# Analyze market context (IHSG, beta, regime)
+with st.spinner("📊 Analyzing IHSG correlation & market regime..."):
+    market_context = market_analyzer.get_market_context(df)
+    sector_info = market_analyzer.get_sector_classification(selected_stock)
+
+# Analyze stock movement (why up/down)
+with st.spinner("🔍 Analyzing stock movement patterns..."):
+    movement_analysis = stock_analyzer.analyze_full(df)
+
+# === PREDICTION PHASE ===
+# Generate predictions using LSTM or fallback to technical predictions
 with st.spinner("🤖 Generating AI predictions..."):
     predictions = predictor.predict_multiple_horizons(df, selected_stock, current_price)
+
+    # Fallback to technical predictions if LSTM confidence is too low
+    if not predictor.model_loaded or predictions.get('1d', {}).get('confidence', 0) < 0.6:
+        technical_predictions = generate_technical_predictions(df, current_price)
+        # Merge predictions (prefer LSTM if available, else use technical)
+        for timeframe in ['1h', '4h', '1d', '3d']:
+            if timeframe in technical_predictions and timeframe in predictions:
+                # Average both predictions for better accuracy
+                tech_pred = technical_predictions[timeframe]
+                lstm_pred = predictions[timeframe]
+                predictions[timeframe]['price'] = (tech_pred['price'] + lstm_pred['price']) / 2
+                predictions[timeframe]['confidence'] = max(tech_pred['confidence'], lstm_pred.get('confidence', 0.5))
+                if 'momentum_score' in tech_pred:
+                    predictions[timeframe]['momentum_score'] = tech_pred['momentum_score']
 
 # Scrape news and analyze sentiment
 with st.spinner("📰 Fetching latest news & analyzing sentiment..."):
@@ -632,8 +953,9 @@ with st.spinner("📰 Fetching latest news & analyzing sentiment..."):
         news_articles = []
         sentiment_result = None
 
-# Generate signal (combining technical + sentiment)
-signal_data = generate_trading_signal(df, predictions)
+# === SIGNAL GENERATION ===
+# Generate trading signal (combining technical + bandar + predictions)
+signal_data = generate_trading_signal(df, predictions, bandar_analysis=bandar_analysis)
 
 # Adjust signal with news sentiment if available
 if sentiment_result and sentiment_result['average_score'] != 0:
@@ -644,18 +966,9 @@ else:
     signal_data['sentiment_signal'] = "NEUTRAL"
     signal_data['sentiment_score'] = 0.0
 
-# Analyze stock movement (why up/down)
-with st.spinner("🔍 Analyzing stock movement patterns..."):
-    movement_analysis = stock_analyzer.analyze_full(df)
-
-# Analyze market context (IHSG, beta, regime)
-with st.spinner("📊 Analyzing IHSG correlation & market regime..."):
-    market_context = market_analyzer.get_market_context(df)
-    sector_info = market_analyzer.get_sector_classification(selected_stock)
-
-# Detect bandar patterns (IDX-specific)
-with st.spinner("🔍 Detecting bandar accumulation/distribution patterns..."):
-    bandar_analysis = bandar_detector.analyze_full(df)
+# Detect Support/Resistance levels
+with st.spinner("📊 Detecting support & resistance levels..."):
+    sr_levels = detect_support_resistance(df, n_levels=3)
 
 # Calculate lot recommendation
 lot_rec = calculate_lot_recommendation(current_price, modal_total, risk_per_trade, stop_loss_pct)
@@ -928,6 +1241,94 @@ with st.expander("ℹ️ **Apa itu Bandar Pattern?**"):
 
 st.markdown("---")
 
+# Support/Resistance Section
+st.subheader("📊 Support & Resistance Levels")
+
+if sr_levels and (sr_levels.get('support') or sr_levels.get('resistance')):
+    col_sr1, col_sr2, col_sr3 = st.columns(3)
+
+    with col_sr1:
+        st.markdown("### 🔴 **Resistance Levels**")
+        if sr_levels.get('resistance'):
+            for i, r in enumerate(sr_levels['resistance'][:3]):
+                strength_bar = "🟥" * int(min(r['strength'], 5))
+                dist_pct = ((r['price'] - current_price) / current_price) * 100
+                st.metric(
+                    f"R{i+1}",
+                    f"Rp {r['price']:,.0f}",
+                    f"{dist_pct:+.2f}%"
+                )
+                st.caption(f"{strength_bar} Strength: {r['touches']} touches")
+        else:
+            st.info("No strong resistance detected")
+
+    with col_sr2:
+        st.markdown("### 🟣 **Pivot Point**")
+        if sr_levels.get('pivot'):
+            pivot = sr_levels['pivot']
+            pivot_dist = ((pivot - current_price) / current_price) * 100
+            st.metric(
+                "Daily Pivot",
+                f"Rp {pivot:,.0f}",
+                f"{pivot_dist:+.2f}%"
+            )
+            if current_price > pivot:
+                st.success("Price above pivot - Bullish bias")
+            else:
+                st.warning("Price below pivot - Bearish bias")
+
+    with col_sr3:
+        st.markdown("### 🟢 **Support Levels**")
+        if sr_levels.get('support'):
+            for i, s in enumerate(sr_levels['support'][:3]):
+                strength_bar = "🟩" * int(min(s['strength'], 5))
+                dist_pct = ((s['price'] - current_price) / current_price) * 100
+                st.metric(
+                    f"S{i+1}",
+                    f"Rp {s['price']:,.0f}",
+                    f"{dist_pct:+.2f}%"
+                )
+                st.caption(f"{strength_bar} Strength: {s['touches']} touches")
+        else:
+            st.info("No strong support detected")
+
+    # Trading strategy based on S/R
+    with st.expander("💡 **Trading Strategy dengan S/R**"):
+        nearest_resistance = sr_levels['resistance'][0] if sr_levels.get('resistance') else None
+        nearest_support = sr_levels['support'][0] if sr_levels.get('support') else None
+
+        st.markdown("""
+        ### 📌 **Cara Menggunakan S/R untuk Trading:**
+
+        #### 🎯 **Entry Points:**
+        - **Buy:** Saat harga mendekati Support level (S1, S2)
+        - **Sell:** Saat harga mendekati Resistance level (R1, R2)
+
+        #### 🛡️ **Stop Loss:**
+        - **Long position:** Set SL di bawah Support terdekat
+        - **Short position:** Set SL di atas Resistance terdekat
+
+        #### 🎯 **Take Profit:**
+        - **Long:** TP di Resistance terdekat
+        - **Short:** TP di Support terdekat
+        """)
+
+        if nearest_resistance and nearest_support:
+            risk_reward = (nearest_resistance['price'] - current_price) / (current_price - nearest_support['price'])
+            st.markdown(f"""
+            ### 📊 **Current Position Analysis:**
+            - **Nearest Resistance:** Rp {nearest_resistance['price']:,.0f} ({((nearest_resistance['price']-current_price)/current_price*100):+.2f}%)
+            - **Nearest Support:** Rp {nearest_support['price']:,.0f} ({((nearest_support['price']-current_price)/current_price*100):+.2f}%)
+            - **Risk/Reward Ratio:** {risk_reward:.2f}:1 {'✅' if risk_reward > 1.5 else '⚠️'}
+
+            {'**Good R/R ratio untuk long position!**' if risk_reward > 1.5 else '**R/R kurang ideal, wait for better entry**'}
+            """)
+
+else:
+    st.info("📊 Insufficient data untuk calculate S/R levels. Perlu minimal 20 hari data historis.")
+
+st.markdown("---")
+
 # Tabs
 tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "📊 Chart & Indicators",
@@ -985,10 +1386,45 @@ with tab1:
         fill='tonexty'
     ))
 
+    # Add Support/Resistance levels
+    if sr_levels and sr_levels.get('resistance'):
+        for i, r_level in enumerate(sr_levels['resistance'][:3]):
+            fig_price.add_hline(
+                y=r_level['price'],
+                line_dash="dot",
+                line_color="red",
+                opacity=0.6,
+                annotation_text=f"R{i+1}: Rp {r_level['price']:,.0f}",
+                annotation_position="right"
+            )
+
+    if sr_levels and sr_levels.get('support'):
+        for i, s_level in enumerate(sr_levels['support'][:3]):
+            fig_price.add_hline(
+                y=s_level['price'],
+                line_dash="dot",
+                line_color="green",
+                opacity=0.6,
+                annotation_text=f"S{i+1}: Rp {s_level['price']:,.0f}",
+                annotation_position="right"
+            )
+
+    # Add pivot line
+    if sr_levels and sr_levels.get('pivot'):
+        fig_price.add_hline(
+            y=sr_levels['pivot'],
+            line_dash="dashdot",
+            line_color="purple",
+            opacity=0.5,
+            annotation_text=f"Pivot: Rp {sr_levels['pivot']:,.0f}",
+            annotation_position="left"
+        )
+
     fig_price.update_layout(
-        height=400,
+        height=500,
         xaxis_rangeslider_visible=False,
-        hovermode='x unified'
+        hovermode='x unified',
+        showlegend=True
     )
 
     st.plotly_chart(fig_price, use_container_width=True)
