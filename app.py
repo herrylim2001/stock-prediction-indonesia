@@ -24,6 +24,7 @@ from utils.news_scraper import IndonesianNewsScraper
 from utils.sentiment_analyzer import IndonesianSentimentAnalyzer
 from utils.stock_analyzer import StockMovementAnalyzer
 from utils.market_analyzer import get_market_analyzer
+from utils.bandar_detector import get_bandar_detector
 
 # Page config
 st.set_page_config(
@@ -608,9 +609,10 @@ def initialize_modules():
     sentiment_analyzer = IndonesianSentimentAnalyzer()
     stock_analyzer = StockMovementAnalyzer()
     market_analyzer = get_market_analyzer()
-    return predictor, news_scraper, sentiment_analyzer, stock_analyzer, market_analyzer
+    bandar_detector = get_bandar_detector()
+    return predictor, news_scraper, sentiment_analyzer, stock_analyzer, market_analyzer, bandar_detector
 
-predictor, news_scraper, sentiment_analyzer, stock_analyzer, market_analyzer = initialize_modules()
+predictor, news_scraper, sentiment_analyzer, stock_analyzer, market_analyzer, bandar_detector = initialize_modules()
 
 # Generate predictions using LSTM or mock
 with st.spinner("🤖 Generating AI predictions..."):
@@ -650,6 +652,10 @@ with st.spinner("🔍 Analyzing stock movement patterns..."):
 with st.spinner("📊 Analyzing IHSG correlation & market regime..."):
     market_context = market_analyzer.get_market_context(df)
     sector_info = market_analyzer.get_sector_classification(selected_stock)
+
+# Detect bandar patterns (IDX-specific)
+with st.spinner("🔍 Detecting bandar accumulation/distribution patterns..."):
+    bandar_analysis = bandar_detector.analyze_full(df)
 
 # Calculate lot recommendation
 lot_rec = calculate_lot_recommendation(current_price, modal_total, risk_per_trade, stop_loss_pct)
@@ -780,6 +786,144 @@ with st.expander("ℹ️ **Penjelasan Market Context**"):
      else "- IHSG bearish + High beta = Risk lebih tinggi, waspadai penurunan tajam" if "BEAR" in regime['regime'] and beta['beta'] > 1.2
      else "- IHSG sideways + Low beta = Relatif stabil, cocok untuk defensive play" if regime['regime'] == "SIDEWAYS" and beta['beta'] < 0.8
      else "- Market condition normal, ikuti technical analysis"}
+    """)
+
+st.markdown("---")
+
+# Bandar Pattern Detection Section (IDX Specialist Feature!)
+st.subheader("🎯 Bandar Pattern Detection - Analisa Smart Money")
+
+# Dominant phase alert
+dominant_phase = bandar_analysis['dominant_phase']
+dominant_conf = bandar_analysis['dominant_confidence']
+
+if dominant_phase != "UNKNOWN":
+    if dominant_phase == "ACCUMULATION":
+        st.success(f"""
+        🟢 **ACCUMULATION PHASE DETECTED** (Confidence: {dominant_conf:.0f}%)
+
+        {bandar_analysis['phase_description']}
+        """)
+    elif dominant_phase == "MARKUP":
+        st.warning(f"""
+        🔥 **MARKUP PHASE DETECTED** (Confidence: {dominant_conf:.0f}%)
+
+        {bandar_analysis['phase_description']}
+        """)
+    elif dominant_phase == "DISTRIBUTION":
+        st.error(f"""
+        🔴 **DISTRIBUTION PHASE DETECTED** (Confidence: {dominant_conf:.0f}%)
+
+        {bandar_analysis['phase_description']}
+        """)
+else:
+    st.info("""
+    ⚪ **NO CLEAR BANDAR PATTERN**
+
+    Tidak ada pola bandar yang jelas terdeteksi. Gunakan analisa teknikal biasa.
+    """)
+
+# Phase breakdown
+col_b1, col_b2, col_b3 = st.columns(3)
+
+with col_b1:
+    acc = bandar_analysis['accumulation']
+    acc_icon = "🟢" if acc['detected'] else "⚪"
+    acc_color = "normal" if acc['detected'] else "off"
+
+    st.metric(
+        f"{acc_icon} Accumulation",
+        f"{acc['confidence']:.0f}%",
+        delta=acc['strength'] if acc['detected'] else "Not detected",
+        delta_color=acc_color
+    )
+
+    if acc['detected'] and len(acc['reasons']) > 0:
+        with st.expander(f"📋 Details ({len(acc['reasons'])} signals)"):
+            for reason in acc['reasons'][:5]:  # Top 5
+                st.caption(reason)
+            st.info(acc['recommendation'])
+
+with col_b2:
+    markup = bandar_analysis['markup']
+    markup_icon = "🔥" if markup['detected'] else "⚪"
+    markup_color = "normal" if markup['detected'] else "off"
+
+    st.metric(
+        f"{markup_icon} Markup",
+        f"{markup['confidence']:.0f}%",
+        delta=markup['strength'] if markup['detected'] else "Not detected",
+        delta_color=markup_color
+    )
+
+    if markup['detected'] and len(markup['reasons']) > 0:
+        with st.expander(f"📋 Details ({len(markup['reasons'])} signals)"):
+            for reason in markup['reasons'][:5]:
+                st.caption(reason)
+            st.info(markup['recommendation'])
+
+with col_b3:
+    dist = bandar_analysis['distribution']
+    dist_icon = "🔴" if dist['detected'] else "⚪"
+    dist_color = "inverse" if dist['detected'] else "off"
+
+    st.metric(
+        f"{dist_icon} Distribution",
+        f"{dist['confidence']:.0f}%",
+        delta=dist['strength'] if dist['detected'] else "Not detected",
+        delta_color=dist_color
+    )
+
+    if dist['detected'] and len(dist['reasons']) > 0:
+        with st.expander(f"📋 Details ({len(dist['reasons'])} signals)"):
+            for reason in dist['reasons'][:5]:
+                st.caption(reason)
+            st.error(dist['recommendation'])
+
+# Educational info
+with st.expander("ℹ️ **Apa itu Bandar Pattern?**"):
+    st.markdown("""
+    ### 🎯 **Bandar / Smart Money Patterns**
+
+    Bandar adalah istilah untuk "market maker" atau pemain besar yang menggerakkan harga saham.
+    Pola bandar biasanya terdiri dari 3 fase:
+
+    #### 🟢 **1. ACCUMULATION (Akumulasi)**
+    - Bandar **membeli saham secara bertahap**
+    - Harga cenderung **stabil atau sedikit turun**
+    - Volume **meningkat** tapi harga tidak naik
+    - OBV naik while price flat (divergence)
+    - Support level terbentuk
+
+    **Signal:** Waktu yang bagus untuk **masuk/beli** sebelum harga naik
+
+    #### 🔥 **2. MARKUP (Pump / Kenaikan)**
+    - Bandar **menaikkan harga** secara agresif
+    - Harga naik dengan volume tinggi
+    - Higher highs & higher lows
+    - Momentum indikator strong (RSI, MACD)
+    - Breaking resistance levels
+
+    **Signal:** **Ride the trend**, tapi waspadai peak/puncak
+
+    #### 🔴 **3. DISTRIBUTION (Distribusi / Dump)**
+    - Bandar **menjual saham** yang sudah dikumpulkan
+    - Harga mulai flat atau turun
+    - Volume tinggi tapi harga tidak naik (red flag!)
+    - OBV turun while price flat (divergence)
+    - Lower highs & lower lows forming
+
+    **Signal:** **Keluar/jual** sebelum harga turun lebih jauh
+
+    ### 💡 **Cara Pakai:**
+    1. **Accumulation detected** → Pertimbangkan beli
+    2. **Markup detected** → Hold dan ride, set trailing stop
+    3. **Distribution detected** → Jual/kurangi posisi
+
+    ### ⚠️ **Catatan Penting:**
+    - Ini bukan 100% akurat, selalu combine dengan analisa lain
+    - Pattern bandar lebih jelas di **saham lapis 2/3** (bukan blue chip)
+    - Gunakan **risk management** yang baik
     """)
 
 st.markdown("---")
