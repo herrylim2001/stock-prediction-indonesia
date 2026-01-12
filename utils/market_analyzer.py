@@ -336,6 +336,7 @@ class MarketAnalyzer:
             'UNVR': {'sector': 'Consumer Goods', 'sub_sector': 'Consumer Non-Cyclicals', 'category': 'Blue Chip'},
             'ICBP': {'sector': 'Consumer Goods', 'sub_sector': 'Food & Beverage', 'category': 'Blue Chip'},
             'INDF': {'sector': 'Consumer Goods', 'sub_sector': 'Food & Beverage', 'category': 'Blue Chip'},
+            'SUPA': {'sector': 'Consumer Goods', 'sub_sector': 'Personal Care', 'category': 'Second Liner'},
 
             # Automotive
             'ASII': {'sector': 'Automotive', 'sub_sector': 'Automotive & Components', 'category': 'Blue Chip'},

@@ -46,6 +46,7 @@ STOCKS = {
     "ACES": {"name": "Ace Hardware Indonesia", "sector": "Retail"},
     "ICBP": {"name": "Indofood CBP", "sector": "Consumer Goods"},
     "EMTK": {"name": "Elang Mahkota Teknologi", "sector": "Media & Teknologi"},
+    "SUPA": {"name": "Surya Pertiwi", "sector": "Consumer Goods"},
 }
 
 # Helper functions
