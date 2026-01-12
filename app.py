@@ -8,6 +8,7 @@ import numpy as np
 import yfinance as yf
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+import pytz
 import ta
 from ta.trend import SMAIndicator, EMAIndicator, MACD
 from ta.momentum import RSIIndicator, StochasticOscillator
@@ -46,8 +47,104 @@ STOCKS = {
     "ACES": {"name": "Ace Hardware Indonesia", "sector": "Retail"},
     "ICBP": {"name": "Indofood CBP", "sector": "Consumer Goods"},
     "EMTK": {"name": "Elang Mahkota Teknologi", "sector": "Media & Teknologi"},
-    "SUPA": {"name": "Surya Pertiwi", "sector": "Consumer Goods"},
+    "SUPA": {"name": "Sinarmas Multiartha (Super Bank)", "sector": "Keuangan"},
 }
+
+# IDX Market Session Detection
+def get_idx_market_session():
+    """
+    Detect current IDX market session (WIB timezone)
+    IDX Trading Hours:
+    - Monday-Friday only
+    - Session 1: 09:00-12:00 WIB
+    - Lunch Break: 12:00-13:00 WIB
+    - Session 2: 13:00-16:00 WIB
+    - Pre-market: 08:45-09:00 WIB
+    - After-hours: 16:00-16:15 WIB
+    """
+    wib = pytz.timezone('Asia/Jakarta')
+    now_wib = datetime.now(wib)
+
+    # Check if weekend
+    if now_wib.weekday() >= 5:  # Saturday = 5, Sunday = 6
+        return {
+            'session': 'WEEKEND',
+            'is_trading': False,
+            'next_open': 'Monday 09:00 WIB',
+            'message': 'Market closed - Weekend'
+        }
+
+    current_time = now_wib.time()
+    hour = current_time.hour
+    minute = current_time.minute
+
+    # Convert to minutes for easier comparison
+    current_minutes = hour * 60 + minute
+
+    # Define session times in minutes
+    pre_market_start = 8 * 60 + 45  # 08:45
+    session1_start = 9 * 60  # 09:00
+    session1_end = 12 * 60  # 12:00
+    session2_start = 13 * 60  # 13:00
+    session2_end = 16 * 60  # 16:00
+    after_hours_end = 16 * 60 + 15  # 16:15
+
+    if current_minutes < pre_market_start:
+        return {
+            'session': 'PRE-OPEN',
+            'is_trading': False,
+            'next_open': 'Today 09:00 WIB',
+            'message': 'Market belum buka',
+            'time_to_open_minutes': session1_start - current_minutes
+        }
+    elif pre_market_start <= current_minutes < session1_start:
+        return {
+            'session': 'PRE-MARKET',
+            'is_trading': False,
+            'next_open': 'Today 09:00 WIB',
+            'message': 'Pre-market (08:45-09:00)',
+            'time_to_open_minutes': session1_start - current_minutes
+        }
+    elif session1_start <= current_minutes < session1_end:
+        return {
+            'session': 'SESSION_1',
+            'is_trading': True,
+            'session_name': 'Sesi 1',
+            'message': 'Trading aktif - Sesi 1 (09:00-12:00)',
+            'time_remaining_minutes': session1_end - current_minutes
+        }
+    elif session1_end <= current_minutes < session2_start:
+        return {
+            'session': 'LUNCH_BREAK',
+            'is_trading': False,
+            'next_open': 'Today 13:00 WIB',
+            'message': 'Istirahat siang (12:00-13:00)',
+            'time_to_open_minutes': session2_start - current_minutes
+        }
+    elif session2_start <= current_minutes < session2_end:
+        return {
+            'session': 'SESSION_2',
+            'is_trading': True,
+            'session_name': 'Sesi 2',
+            'message': 'Trading aktif - Sesi 2 (13:00-16:00)',
+            'time_remaining_minutes': session2_end - current_minutes
+        }
+    elif session2_end <= current_minutes < after_hours_end:
+        return {
+            'session': 'AFTER_HOURS',
+            'is_trading': False,
+            'next_open': 'Tomorrow 09:00 WIB',
+            'message': 'After-hours (16:00-16:15)',
+            'time_to_open_minutes': None
+        }
+    else:
+        return {
+            'session': 'CLOSED',
+            'is_trading': False,
+            'next_open': 'Tomorrow 09:00 WIB',
+            'message': 'Market sudah tutup',
+            'time_to_open_minutes': None
+        }
 
 # Helper functions
 @st.cache_data(ttl=1800)  # Cache for 30 minutes (more frequent updates)
@@ -152,14 +249,61 @@ def calculate_technical_indicators(df):
 
         # Volume indicators
         if 'volume' in df.columns:
-            from ta.volume import OnBalanceVolumeIndicator
+            from ta.volume import OnBalanceVolumeIndicator, MFIIndicator, VolumeWeightedAveragePrice
             df['obv'] = OnBalanceVolumeIndicator(df['close'], df['volume']).on_balance_volume()
             df['volume_sma'] = df['volume'].rolling(window=20).mean()
             df['volume_ratio'] = df['volume'] / df['volume_sma']
+
+            # Money Flow Index (MFI) - like RSI but with volume
+            try:
+                df['mfi'] = MFIIndicator(df['high'], df['low'], df['close'], df['volume'], window=14).money_flow_index()
+            except:
+                df['mfi'] = 50.0
+
+            # VWAP (Volume Weighted Average Price)
+            try:
+                df['vwap'] = VolumeWeightedAveragePrice(df['high'], df['low'], df['close'], df['volume']).volume_weighted_average_price()
+            except:
+                df['vwap'] = df['close']
         else:
             df['obv'] = 0.0
             df['volume_sma'] = 1000000
             df['volume_ratio'] = 1.0
+            df['mfi'] = 50.0
+            df['vwap'] = df['close']
+
+        # Additional momentum indicators
+        from ta.trend import CCIIndicator, ADXIndicator
+        from ta.momentum import WilliamsRIndicator
+
+        # CCI (Commodity Channel Index)
+        try:
+            df['cci'] = CCIIndicator(df['high'], df['low'], df['close'], window=20).cci()
+        except:
+            df['cci'] = 0.0
+
+        # ADX (Average Directional Index) - trend strength
+        try:
+            adx = ADXIndicator(df['high'], df['low'], df['close'], window=14)
+            df['adx'] = adx.adx()
+            df['adx_pos'] = adx.adx_pos()
+            df['adx_neg'] = adx.adx_neg()
+        except:
+            df['adx'] = 25.0
+            df['adx_pos'] = 25.0
+            df['adx_neg'] = 25.0
+
+        # Williams %R
+        try:
+            df['williams_r'] = WilliamsRIndicator(df['high'], df['low'], df['close'], lbp=14).williams_r()
+        except:
+            df['williams_r'] = -50.0
+
+        # EMA 200 for long-term trend
+        try:
+            df['ema_200'] = EMAIndicator(df['close'], window=200).ema_indicator()
+        except:
+            df['ema_200'] = df['close']
 
     except Exception as e:
         st.warning(f"Could not calculate some technical indicators: {e}")
@@ -187,11 +331,10 @@ def calculate_technical_indicators(df):
 
 def generate_technical_predictions(df, current_price, volatility=0.02):
     """
-    Generate predictions based on technical analysis and momentum
-    More accurate than random predictions
+    ENHANCED prediction engine with 12+ technical indicators
+    More accurate predictions by feeding more data
     """
     if df is None or len(df) < 20:
-        # Fallback to neutral predictions if insufficient data
         return {
             "1h": {"price": current_price, "confidence": 0.50, "trend": "NEUTRAL"},
             "4h": {"price": current_price, "confidence": 0.50, "trend": "NEUTRAL"},
@@ -201,83 +344,188 @@ def generate_technical_predictions(df, current_price, volatility=0.02):
 
     latest = df.iloc[-1]
 
-    # Calculate momentum score (-100 to +100)
+    # Calculate momentum score (-200 to +200) - increased range for more indicators
     momentum_score = 0
     confidence_factors = []
 
-    # 1. RSI momentum
+    # === INDICATOR 1: RSI (Relative Strength Index) ===
     rsi = latest.get('rsi', 50)
     if pd.notna(rsi):
         if rsi < 30:
             momentum_score += 25
-            confidence_factors.append(0.8)
+            confidence_factors.append(0.85)
         elif rsi < 40:
             momentum_score += 15
-            confidence_factors.append(0.7)
+            confidence_factors.append(0.75)
         elif rsi > 70:
             momentum_score -= 25
-            confidence_factors.append(0.8)
+            confidence_factors.append(0.85)
         elif rsi > 60:
             momentum_score -= 15
-            confidence_factors.append(0.7)
+            confidence_factors.append(0.75)
         else:
-            confidence_factors.append(0.6)
+            confidence_factors.append(0.65)
 
-    # 2. MACD momentum
+    # === INDICATOR 2: MFI (Money Flow Index) - Volume-weighted RSI ===
+    mfi = latest.get('mfi', 50)
+    if pd.notna(mfi):
+        if mfi < 20:  # Oversold with volume
+            momentum_score += 20
+            confidence_factors.append(0.8)
+        elif mfi < 35:
+            momentum_score += 10
+            confidence_factors.append(0.7)
+        elif mfi > 80:  # Overbought with volume
+            momentum_score -= 20
+            confidence_factors.append(0.8)
+        elif mfi > 65:
+            momentum_score -= 10
+            confidence_factors.append(0.7)
+
+    # === INDICATOR 3: MACD (Moving Average Convergence Divergence) ===
     macd = latest.get('macd', 0)
     macd_signal = latest.get('macd_signal', 0)
     if pd.notna(macd) and pd.notna(macd_signal):
         macd_diff = macd - macd_signal
         if macd_diff > 0:
             momentum_score += 15
-            confidence_factors.append(0.75)
+            confidence_factors.append(0.8)
         else:
             momentum_score -= 15
-            confidence_factors.append(0.75)
+            confidence_factors.append(0.8)
 
-    # 3. Moving Average trend
+    # === INDICATOR 4: Moving Average Alignment (Multiple Timeframes) ===
+    sma_10 = latest.get('sma_10', current_price)
     sma_20 = latest.get('sma_20', current_price)
     sma_50 = latest.get('sma_50', current_price)
-    if pd.notna(sma_20) and pd.notna(sma_50):
-        if current_price > sma_20 > sma_50:
+    ema_200 = latest.get('ema_200', current_price)
+
+    if pd.notna(sma_10) and pd.notna(sma_20) and pd.notna(sma_50):
+        # Perfect bullish alignment
+        if current_price > sma_10 > sma_20 > sma_50:
+            momentum_score += 30
+            confidence_factors.append(0.9)
+        # Perfect bearish alignment
+        elif current_price < sma_10 < sma_20 < sma_50:
+            momentum_score -= 30
+            confidence_factors.append(0.9)
+        # Partial bullish
+        elif current_price > sma_20 > sma_50:
             momentum_score += 20
             confidence_factors.append(0.8)
+        # Partial bearish
         elif current_price < sma_20 < sma_50:
             momentum_score -= 20
             confidence_factors.append(0.8)
         elif current_price > sma_20:
             momentum_score += 10
-            confidence_factors.append(0.65)
+            confidence_factors.append(0.7)
         else:
             momentum_score -= 10
-            confidence_factors.append(0.65)
+            confidence_factors.append(0.7)
 
-    # 4. Bollinger Bands position
-    bb_upper = latest.get('bb_upper', current_price * 1.02)
-    bb_lower = latest.get('bb_lower', current_price * 0.98)
-    bb_middle = latest.get('bb_middle', current_price)
-    if pd.notna(bb_upper) and pd.notna(bb_lower):
-        bb_position = (current_price - bb_lower) / (bb_upper - bb_lower)
-        if bb_position < 0.2:
+    # Long-term trend (EMA 200)
+    if pd.notna(ema_200):
+        if current_price > ema_200:
+            momentum_score += 10
+        else:
+            momentum_score -= 10
+
+    # === INDICATOR 5: ADX (Trend Strength) ===
+    adx = latest.get('adx', 25)
+    adx_pos = latest.get('adx_pos', 25)
+    adx_neg = latest.get('adx_neg', 25)
+
+    if pd.notna(adx):
+        # Strong trend
+        if adx > 40:
+            confidence_factors.append(0.9)  # High confidence in strong trend
+            if adx_pos > adx_neg:
+                momentum_score += 15
+            else:
+                momentum_score -= 15
+        # Weak trend
+        elif adx < 20:
+            confidence_factors.append(0.6)  # Low confidence in weak trend
+        else:
+            confidence_factors.append(0.75)
+
+    # === INDICATOR 6: CCI (Commodity Channel Index) ===
+    cci = latest.get('cci', 0)
+    if pd.notna(cci):
+        if cci > 100:
             momentum_score += 15
             confidence_factors.append(0.75)
-        elif bb_position > 0.8:
+        elif cci < -100:
             momentum_score -= 15
             confidence_factors.append(0.75)
 
-    # 5. Volume trend
+    # === INDICATOR 7: Williams %R ===
+    williams_r = latest.get('williams_r', -50)
+    if pd.notna(williams_r):
+        if williams_r > -20:  # Overbought
+            momentum_score -= 10
+        elif williams_r < -80:  # Oversold
+            momentum_score += 10
+
+    # === INDICATOR 8: Bollinger Bands Position ===
+    bb_upper = latest.get('bb_upper', current_price * 1.02)
+    bb_lower = latest.get('bb_lower', current_price * 0.98)
+    bb_width = latest.get('bb_width', 0.04)
+
+    if pd.notna(bb_upper) and pd.notna(bb_lower):
+        bb_position = (current_price - bb_lower) / (bb_upper - bb_lower)
+        if bb_position < 0.1:
+            momentum_score += 20
+            confidence_factors.append(0.8)
+        elif bb_position > 0.9:
+            momentum_score -= 20
+            confidence_factors.append(0.8)
+
+        # BB Squeeze (low volatility = breakout soon)
+        if pd.notna(bb_width) and bb_width < 0.03:
+            confidence_factors.append(0.7)  # Lower confidence during squeeze
+
+    # === INDICATOR 9: VWAP (Volume Weighted Average Price) ===
+    vwap = latest.get('vwap', current_price)
+    if pd.notna(vwap):
+        if current_price > vwap * 1.01:
+            momentum_score += 10
+        elif current_price < vwap * 0.99:
+            momentum_score -= 10
+
+    # === INDICATOR 10: Volume Analysis ===
     volume_ratio = latest.get('volume_ratio', 1.0)
     if pd.notna(volume_ratio):
-        if volume_ratio > 1.5:
-            # High volume confirms trend
+        if volume_ratio > 2.0:
+            # Very high volume - strong signal
+            confidence_factors.append(0.9)
+        elif volume_ratio > 1.5:
             confidence_factors.append(0.85)
         elif volume_ratio < 0.7:
-            # Low volume reduces confidence
-            confidence_factors.append(0.55)
+            confidence_factors.append(0.6)
         else:
-            confidence_factors.append(0.65)
+            confidence_factors.append(0.7)
 
-    # 6. Recent price momentum
+    # === INDICATOR 11: Stochastic Oscillator ===
+    stoch_k = latest.get('stoch_k', 50)
+    stoch_d = latest.get('stoch_d', 50)
+
+    if pd.notna(stoch_k) and pd.notna(stoch_d):
+        if stoch_k < 20 and stoch_d < 20:
+            momentum_score += 15
+        elif stoch_k > 80 and stoch_d > 80:
+            momentum_score -= 15
+
+    # === INDICATOR 12: Multi-Timeframe Price Momentum ===
+    if len(df) >= 3:
+        price_3d_ago = df.iloc[-3]['close']
+        momentum_3d = ((current_price - price_3d_ago) / price_3d_ago) * 100
+        if momentum_3d > 3:
+            momentum_score += 10
+        elif momentum_3d < -3:
+            momentum_score -= 10
+
     if len(df) >= 5:
         price_5d_ago = df.iloc[-5]['close']
         momentum_5d = ((current_price - price_5d_ago) / price_5d_ago) * 100
@@ -286,16 +534,52 @@ def generate_technical_predictions(df, current_price, volatility=0.02):
         elif momentum_5d < -5:
             momentum_score -= 15
 
-    # Normalize momentum score to -1 to +1
-    normalized_momentum = np.clip(momentum_score / 100, -1, 1)
+    if len(df) >= 10:
+        price_10d_ago = df.iloc[-10]['close']
+        momentum_10d = ((current_price - price_10d_ago) / price_10d_ago) * 100
+        if momentum_10d > 10:
+            momentum_score += 20
+        elif momentum_10d < -10:
+            momentum_score -= 20
 
-    # Calculate base confidence
-    base_confidence = np.mean(confidence_factors) if confidence_factors else 0.60
+    # === DAY OF WEEK PATTERN (IDX specific) ===
+    try:
+        wib = pytz.timezone('Asia/Jakarta')
+        now_wib = datetime.now(wib)
+        day_of_week = now_wib.weekday()  # 0=Monday, 4=Friday
 
-    # Determine trend
-    if normalized_momentum > 0.3:
+        # Monday effect (often bearish)
+        if day_of_week == 0:
+            momentum_score -= 5
+        # Wednesday (mid-week)
+        elif day_of_week == 2:
+            confidence_factors.append(0.75)
+        # Friday (profit-taking)
+        elif day_of_week == 4:
+            momentum_score -= 5
+    except:
+        pass
+
+    # === MARKET SESSION AWARENESS ===
+    try:
+        market_session = get_idx_market_session()
+        if market_session['is_trading']:
+            confidence_factors.append(0.8)
+        else:
+            confidence_factors.append(0.65)  # Lower confidence when market closed
+    except:
+        pass
+
+    # Normalize momentum score to -1 to +1 (adjusted for new range)
+    normalized_momentum = np.clip(momentum_score / 200, -1, 1)
+
+    # Calculate base confidence from all factors
+    base_confidence = np.mean(confidence_factors) if confidence_factors else 0.65
+
+    # Determine trend with tighter thresholds
+    if normalized_momentum > 0.25:
         trend = "UP"
-    elif normalized_momentum < -0.3:
+    elif normalized_momentum < -0.25:
         trend = "DOWN"
     else:
         trend = "NEUTRAL"
@@ -310,31 +594,32 @@ def generate_technical_predictions(df, current_price, volatility=0.02):
     # Generate predictions with momentum-based adjustments
     predictions = {
         "1h": {
-            "price": current_price * (1 + normalized_momentum * 0.003 + np.random.normal(0, atr_pct * 0.2)),
-            "confidence": base_confidence * 0.9,  # Lower confidence for short term
+            "price": current_price * (1 + normalized_momentum * 0.002 + np.random.normal(0, atr_pct * 0.15)),
+            "confidence": base_confidence * 0.88,
             "trend": trend if abs(normalized_momentum) > 0.15 else "NEUTRAL"
         },
         "4h": {
-            "price": current_price * (1 + normalized_momentum * 0.008 + np.random.normal(0, atr_pct * 0.4)),
-            "confidence": base_confidence * 0.95,
-            "trend": trend if abs(normalized_momentum) > 0.2 else "NEUTRAL"
+            "price": current_price * (1 + normalized_momentum * 0.006 + np.random.normal(0, atr_pct * 0.3)),
+            "confidence": base_confidence * 0.92,
+            "trend": trend if abs(normalized_momentum) > 0.18 else "NEUTRAL"
         },
         "1d": {
-            "price": current_price * (1 + normalized_momentum * 0.015 + np.random.normal(0, atr_pct * 0.6)),
+            "price": current_price * (1 + normalized_momentum * 0.012 + np.random.normal(0, atr_pct * 0.5)),
             "confidence": base_confidence,
             "trend": trend
         },
         "3d": {
-            "price": current_price * (1 + normalized_momentum * 0.035 + np.random.normal(0, atr_pct * 1.0)),
-            "confidence": base_confidence * 0.85,  # Lower confidence for longer term
-            "trend": trend if abs(normalized_momentum) > 0.25 else "NEUTRAL"
+            "price": current_price * (1 + normalized_momentum * 0.028 + np.random.normal(0, atr_pct * 0.8)),
+            "confidence": base_confidence * 0.87,
+            "trend": trend if abs(normalized_momentum) > 0.22 else "NEUTRAL"
         }
     }
 
     # Ensure confidence is in valid range
     for timeframe in predictions:
-        predictions[timeframe]['confidence'] = np.clip(predictions[timeframe]['confidence'], 0.5, 0.9)
+        predictions[timeframe]['confidence'] = np.clip(predictions[timeframe]['confidence'], 0.55, 0.92)
         predictions[timeframe]['momentum_score'] = momentum_score
+        predictions[timeframe]['indicators_used'] = len(confidence_factors)
 
     return predictions
 

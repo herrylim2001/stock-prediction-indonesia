@@ -326,6 +326,7 @@ class MarketAnalyzer:
             'BBRI': {'sector': 'Banking', 'sub_sector': 'Bank', 'category': 'Blue Chip'},
             'BMRI': {'sector': 'Banking', 'sub_sector': 'Bank', 'category': 'Blue Chip'},
             'BBNI': {'sector': 'Banking', 'sub_sector': 'Bank', 'category': 'Blue Chip'},
+            'SUPA': {'sector': 'Banking', 'sub_sector': 'Bank', 'category': 'Second Liner'},
 
             # Telecommunication
             'TLKM': {'sector': 'Telecommunication', 'sub_sector': 'Telco', 'category': 'Blue Chip'},
@@ -336,7 +337,6 @@ class MarketAnalyzer:
             'UNVR': {'sector': 'Consumer Goods', 'sub_sector': 'Consumer Non-Cyclicals', 'category': 'Blue Chip'},
             'ICBP': {'sector': 'Consumer Goods', 'sub_sector': 'Food & Beverage', 'category': 'Blue Chip'},
             'INDF': {'sector': 'Consumer Goods', 'sub_sector': 'Food & Beverage', 'category': 'Blue Chip'},
-            'SUPA': {'sector': 'Consumer Goods', 'sub_sector': 'Personal Care', 'category': 'Second Liner'},
 
             # Automotive
             'ASII': {'sector': 'Automotive', 'sub_sector': 'Automotive & Components', 'category': 'Blue Chip'},
