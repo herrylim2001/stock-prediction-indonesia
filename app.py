@@ -146,6 +146,104 @@ def get_idx_market_session():
             'time_to_open_minutes': None
         }
 
+def calculate_market_target_time(hours_ahead):
+    """
+    Calculate target time considering IDX market hours (09:00-16:00 WIB, Mon-Fri)
+
+    Args:
+        hours_ahead: Trading hours ahead (e.g., 1, 4)
+
+    Returns:
+        dict with target_datetime, session_info, is_valid
+    """
+    wib = pytz.timezone('Asia/Jakarta')
+    now_wib = datetime.now(wib)
+
+    # Market hours constants (in minutes from midnight)
+    MARKET_OPEN = 9 * 60  # 09:00
+    LUNCH_START = 12 * 60  # 12:00
+    LUNCH_END = 13 * 60  # 13:00
+    MARKET_CLOSE = 16 * 60  # 16:00
+
+    # Trading hours per day (excluding lunch)
+    TRADING_HOURS_PER_DAY = 6  # 3h (09:00-12:00) + 3h (13:00-16:00)
+
+    # Convert hours ahead to minutes
+    minutes_ahead = hours_ahead * 60
+    remaining_minutes = minutes_ahead
+
+    target_dt = now_wib
+
+    # Start from current time
+    while remaining_minutes > 0:
+        # Skip to next trading day if weekend
+        while target_dt.weekday() >= 5:
+            target_dt += timedelta(days=1)
+            target_dt = target_dt.replace(hour=9, minute=0, second=0, microsecond=0)
+
+        current_minutes = target_dt.hour * 60 + target_dt.minute
+
+        # If before market open, jump to 09:00
+        if current_minutes < MARKET_OPEN:
+            target_dt = target_dt.replace(hour=9, minute=0, second=0, microsecond=0)
+            current_minutes = MARKET_OPEN
+
+        # If after market close, jump to next day 09:00
+        if current_minutes >= MARKET_CLOSE:
+            target_dt += timedelta(days=1)
+            target_dt = target_dt.replace(hour=9, minute=0, second=0, microsecond=0)
+            continue
+
+        # If in lunch break, jump to 13:00
+        if LUNCH_START <= current_minutes < LUNCH_END:
+            target_dt = target_dt.replace(hour=13, minute=0, second=0, microsecond=0)
+            current_minutes = LUNCH_END
+
+        # Calculate remaining trading minutes in current day
+        if current_minutes < LUNCH_START:
+            # In session 1
+            minutes_until_lunch = LUNCH_START - current_minutes
+            minutes_in_session2 = MARKET_CLOSE - LUNCH_END
+            remaining_today = minutes_until_lunch + minutes_in_session2
+        else:
+            # In session 2
+            remaining_today = MARKET_CLOSE - current_minutes
+
+        # Can we finish in current day?
+        if remaining_minutes <= remaining_today:
+            # Add remaining minutes
+            target_dt += timedelta(minutes=remaining_minutes)
+
+            # Skip lunch if we land in it
+            if LUNCH_START <= (target_dt.hour * 60 + target_dt.minute) < LUNCH_END:
+                minutes_in_lunch = (target_dt.hour * 60 + target_dt.minute) - LUNCH_START
+                target_dt += timedelta(minutes=60 - minutes_in_lunch)
+
+            remaining_minutes = 0
+        else:
+            # Move to next trading day
+            remaining_minutes -= remaining_today
+            target_dt += timedelta(days=1)
+            target_dt = target_dt.replace(hour=9, minute=0, second=0, microsecond=0)
+
+    # Get session info for target time
+    target_hour_mins = target_dt.hour * 60 + target_dt.minute
+    if 9 * 60 <= target_hour_mins < 12 * 60:
+        session = "Sesi 1 (09:00-12:00)"
+    elif 13 * 60 <= target_hour_mins < 16 * 60:
+        session = "Sesi 2 (13:00-16:00)"
+    else:
+        session = "Outside market hours"
+
+    return {
+        'target_datetime': target_dt,
+        'session': session,
+        'day_name': target_dt.strftime('%A'),
+        'date': target_dt.strftime('%d %B %Y'),
+        'time': target_dt.strftime('%H:%M WIB'),
+        'is_valid': True
+    }
+
 # Helper functions
 @st.cache_data(ttl=1800)  # Cache for 30 minutes (more frequent updates)
 def fetch_stock_data(stock_code, period="6mo"):
@@ -1886,15 +1984,42 @@ with tab2:
 
     st.markdown("---")
 
+    # Market Hours Info Banner
+    market_session = get_idx_market_session()
+    if market_session['is_trading']:
+        st.success(f"""
+        ✅ **Market OPEN** - {market_session['message']}
+
+        Prediction times menggunakan **jam trading IDX (WIB/UTC+7)** - hanya menghitung jam market 09:00-16:00 (Senin-Jumat).
+        """)
+    else:
+        st.warning(f"""
+        ⏸️ **Market CLOSED** - {market_session['message']}
+
+        Prediction times menggunakan **jam trading IDX (WIB/UTC+7)**. Next market open: **{market_session.get('next_open', 'N/A')}**
+        """)
+
+    st.info("""
+    📊 **IDX Market Hours (WIB/UTC+7):**
+    - **Sesi 1:** 09:00 - 12:00 WIB
+    - **Istirahat:** 12:00 - 13:00 WIB
+    - **Sesi 2:** 13:00 - 16:00 WIB
+    - **Market Days:** Senin - Jumat (kecuali hari libur)
+
+    ⏰ Semua waktu prediction adalah **trading hours** - bukan waktu kalender biasa!
+    """)
+
+    st.markdown("---")
+
     # Predictions Display
     pred_cols = st.columns(4)
 
-    # Mapping timeframes to timedelta
-    timeframe_deltas = {
-        "1h": timedelta(hours=1),
-        "3h": timedelta(hours=3),
-        "1d": timedelta(days=1),
-        "3d": timedelta(days=3)
+    # Mapping timeframes to market hours (accounting for IDX trading hours)
+    timeframe_configs = {
+        "1h": {"label": "1 JAM", "hours": 1, "desc": "1 jam trading"},
+        "4h": {"label": "4 JAM", "hours": 4, "desc": "4 jam trading"},
+        "1d": {"label": "1 HARI", "hours": None, "desc": "1 hari trading"},
+        "3d": {"label": "3 HARI", "hours": None, "desc": "3 hari trading"}
     }
 
     for i, (timeframe, pred) in enumerate(predictions.items()):
@@ -1902,13 +2027,44 @@ with tab2:
             price_diff = pred['price'] - current_price
             price_diff_pct = (price_diff / current_price) * 100
 
-            # Calculate target date/time for this prediction
-            target_datetime = current_time + timeframe_deltas.get(timeframe, timedelta(0))
-            day_name = target_datetime.strftime('%A')
-            target_date = target_datetime.strftime('%d %B %Y')
-            target_time = target_datetime.strftime('%H:%M WIB')
+            config = timeframe_configs.get(timeframe, {"label": timeframe.upper(), "hours": None, "desc": ""})
 
-            st.markdown(f"### {timeframe.upper()}")
+            # Calculate target date/time for this prediction (MARKET TIME)
+            if timeframe == "1h" or timeframe == "4h":
+                # Use market hours calculator
+                target_info = calculate_market_target_time(config['hours'])
+                day_name = target_info['day_name']
+                target_date = target_info['date']
+                target_time = target_info['time']
+                session_info = target_info['session']
+            elif timeframe == "1d":
+                # 1 day ahead (next trading day)
+                wib = pytz.timezone('Asia/Jakarta')
+                target_dt = datetime.now(wib) + timedelta(days=1)
+                # Skip weekend
+                while target_dt.weekday() >= 5:
+                    target_dt += timedelta(days=1)
+                target_dt = target_dt.replace(hour=15, minute=45, second=0)  # End of trading
+                day_name = target_dt.strftime('%A')
+                target_date = target_dt.strftime('%d %B %Y')
+                target_time = target_dt.strftime('%H:%M WIB')
+                session_info = "Akhir sesi trading"
+            else:  # 3d
+                # 3 days ahead (trading days)
+                wib = pytz.timezone('Asia/Jakarta')
+                target_dt = datetime.now(wib)
+                trading_days = 0
+                while trading_days < 3:
+                    target_dt += timedelta(days=1)
+                    if target_dt.weekday() < 5:  # Not weekend
+                        trading_days += 1
+                target_dt = target_dt.replace(hour=15, minute=45, second=0)
+                day_name = target_dt.strftime('%A')
+                target_date = target_dt.strftime('%d %B %Y')
+                target_time = target_dt.strftime('%H:%M WIB')
+                session_info = "Akhir sesi trading"
+
+            st.markdown(f"### {config['label']}")
             st.metric(
                 "Predicted Price",
                 f"Rp {pred['price']:,.0f}",
@@ -1920,9 +2076,12 @@ with tab2:
             trend_color = "🟢" if pred['trend'] == "UP" else "🔴" if pred['trend'] == "DOWN" else "🟡"
             st.markdown(f"**Trend:** {trend_color} {pred['trend']}")
 
-            # Display target date and day
+            # Display target date and time (MARKET TIME)
             st.markdown(f"📅 **{day_name}**")
-            st.caption(f"{target_date} • {target_time}")
+            st.caption(f"{target_date}")
+            st.caption(f"🕐 {target_time}")
+            if timeframe in ["1h", "4h"]:
+                st.caption(f"📊 {session_info}")
 
     # Prediction chart
     st.markdown("---")
