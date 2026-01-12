@@ -690,34 +690,82 @@ def generate_technical_predictions(df, current_price, volatility=0.02):
         atr_pct = volatility
 
     # Generate predictions with momentum-based adjustments
+    # IMPORTANT: Ensure trend direction matches price movement!
+
+    # Calculate base price changes with bounded noise
+    def calculate_prediction(momentum_factor, noise_factor, min_change_pct=0.001):
+        """
+        Calculate price prediction ensuring trend consistency
+
+        Args:
+            momentum_factor: How much momentum affects this timeframe
+            noise_factor: Volatility noise multiplier
+            min_change_pct: Minimum change to ensure (0.1% default)
+        """
+        # Base momentum change
+        momentum_change = normalized_momentum * momentum_factor
+
+        # Add controlled noise (bounded to not flip direction)
+        noise = np.random.normal(0, atr_pct * noise_factor)
+
+        # Total change
+        total_change = momentum_change + noise
+
+        # ENFORCE TREND CONSISTENCY
+        if trend == "UP":
+            # Force minimum upward movement
+            total_change = max(total_change, min_change_pct)
+        elif trend == "DOWN":
+            # Force maximum downward movement
+            total_change = min(total_change, -min_change_pct)
+        else:  # NEUTRAL
+            # Allow small fluctuations but cap magnitude
+            total_change = np.clip(total_change, -0.005, 0.005)  # Max ±0.5%
+
+        predicted_price = current_price * (1 + total_change)
+        return predicted_price
+
+    # Generate predictions for each timeframe
     predictions = {
         "1h": {
-            "price": current_price * (1 + normalized_momentum * 0.002 + np.random.normal(0, atr_pct * 0.15)),
+            "price": calculate_prediction(momentum_factor=0.002, noise_factor=0.15, min_change_pct=0.0008),
             "confidence": base_confidence * 0.88,
             "trend": trend if abs(normalized_momentum) > 0.15 else "NEUTRAL"
         },
         "4h": {
-            "price": current_price * (1 + normalized_momentum * 0.006 + np.random.normal(0, atr_pct * 0.3)),
+            "price": calculate_prediction(momentum_factor=0.006, noise_factor=0.3, min_change_pct=0.002),
             "confidence": base_confidence * 0.92,
             "trend": trend if abs(normalized_momentum) > 0.18 else "NEUTRAL"
         },
         "1d": {
-            "price": current_price * (1 + normalized_momentum * 0.012 + np.random.normal(0, atr_pct * 0.5)),
+            "price": calculate_prediction(momentum_factor=0.012, noise_factor=0.5, min_change_pct=0.003),
             "confidence": base_confidence,
             "trend": trend
         },
         "3d": {
-            "price": current_price * (1 + normalized_momentum * 0.028 + np.random.normal(0, atr_pct * 0.8)),
+            "price": calculate_prediction(momentum_factor=0.028, noise_factor=0.8, min_change_pct=0.005),
             "confidence": base_confidence * 0.87,
             "trend": trend if abs(normalized_momentum) > 0.22 else "NEUTRAL"
         }
     }
 
-    # Ensure confidence is in valid range
+    # Ensure confidence is in valid range and add metadata
     for timeframe in predictions:
         predictions[timeframe]['confidence'] = np.clip(predictions[timeframe]['confidence'], 0.55, 0.92)
         predictions[timeframe]['momentum_score'] = momentum_score
         predictions[timeframe]['indicators_used'] = len(confidence_factors)
+
+        # FINAL VALIDATION: Verify trend matches price movement
+        price_change_pct = ((predictions[timeframe]['price'] - current_price) / current_price) * 100
+        pred_trend = predictions[timeframe]['trend']
+
+        # Debug: Ensure consistency
+        if pred_trend == "UP" and price_change_pct < 0:
+            # Force correction if still negative despite earlier fix
+            predictions[timeframe]['price'] = current_price * 1.001  # Minimum 0.1% up
+        elif pred_trend == "DOWN" and price_change_pct > 0:
+            # Force correction if still positive despite earlier fix
+            predictions[timeframe]['price'] = current_price * 0.999  # Minimum 0.1% down
 
     return predictions
 
