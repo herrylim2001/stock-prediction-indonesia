@@ -1138,6 +1138,85 @@ def generate_technical_predictions(df, current_price, volatility=0.02, sentiment
 
     return predictions
 
+def check_yesterday_prediction_accuracy(df):
+    """
+    Check accuracy of yesterday's 1-day prediction vs today's actual price
+
+    This creates predictions using yesterday's data and compares with today's actual close
+
+    Returns:
+        dict with accuracy metrics or None if not enough data
+    """
+    if df is None or len(df) < 2:
+        return None
+
+    try:
+        # Get yesterday's data (all data except today)
+        yesterday_df = df.iloc[:-1].copy()
+
+        # Get yesterday's close price (what we predicted FROM)
+        yesterday_close = yesterday_df.iloc[-1]['close']
+
+        # Get today's actual close (what we want to COMPARE TO)
+        today_actual = df.iloc[-1]['close']
+
+        # Generate prediction using yesterday's data (what would we have predicted yesterday?)
+        yesterday_predictions = generate_technical_predictions(
+            yesterday_df,
+            yesterday_close,
+            sentiment_result=None  # No sentiment for historical check
+        )
+
+        # Get the 1-day prediction
+        pred_1d = yesterday_predictions.get('1d', {})
+        predicted_price = pred_1d.get('price', yesterday_close)
+        predicted_trend = pred_1d.get('trend', 'NEUTRAL')
+        confidence = pred_1d.get('confidence', 0)
+
+        # Calculate errors
+        error = predicted_price - today_actual
+        error_pct = (error / today_actual) * 100
+        abs_error_pct = abs(error_pct)
+
+        # Check direction accuracy
+        actual_change = today_actual - yesterday_close
+        actual_trend = "UP" if actual_change > 0 else "DOWN" if actual_change < 0 else "NEUTRAL"
+
+        direction_correct = (predicted_trend == actual_trend)
+
+        # Determine accuracy status
+        if abs_error_pct < 1.0:
+            status = "EXCELLENT"
+            status_icon = "🎯"
+        elif abs_error_pct < 2.0:
+            status = "GOOD"
+            status_icon = "✅"
+        elif abs_error_pct < 3.0:
+            status = "FAIR"
+            status_icon = "🟡"
+        else:
+            status = "POOR"
+            status_icon = "❌"
+
+        return {
+            'yesterday_close': yesterday_close,
+            'predicted_price': predicted_price,
+            'predicted_trend': predicted_trend,
+            'today_actual': today_actual,
+            'actual_trend': actual_trend,
+            'error': error,
+            'error_pct': error_pct,
+            'abs_error_pct': abs_error_pct,
+            'direction_correct': direction_correct,
+            'confidence': confidence,
+            'status': status,
+            'status_icon': status_icon
+        }
+
+    except Exception as e:
+        print(f"Error checking prediction accuracy: {e}")
+        return None
+
 def generate_trading_signal(df, predictions, bandar_analysis=None):
     """
     Generate trading signal based on technical indicators, predictions, and bandar patterns
@@ -1756,6 +1835,11 @@ with st.spinner("🤖 Generating AI predictions with news sentiment..."):
                 predictions[timeframe]['confidence'] = max(tech_pred['confidence'], lstm_pred.get('confidence', 0.5))
                 if 'momentum_score' in tech_pred:
                     predictions[timeframe]['momentum_score'] = tech_pred['momentum_score']
+
+# === PREDICTION ACCURACY CHECK ===
+# Check yesterday's prediction vs today's actual price
+with st.spinner("📊 Checking yesterday's prediction accuracy..."):
+    accuracy_check = check_yesterday_prediction_accuracy(df)
 
 # === SIGNAL GENERATION ===
 # Generate trading signal (combining technical + bandar + predictions)
@@ -2430,6 +2514,93 @@ with tab2:
     """)
 
     st.markdown("---")
+
+    # === PREDICTION ACCURACY CHECK DISPLAY ===
+    if accuracy_check:
+        st.subheader("📊 Prediction Accuracy Check")
+
+        st.info("""
+        **Apa ini?** Kita check prediksi yang dibuat **kemarin** untuk **hari ini**, lalu bandingkan dengan **actual price hari ini**.
+        Ini untuk measure seberapa akurat sistem prediksi kita!
+        """)
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.metric(
+                "Kemarin Close",
+                f"Rp {accuracy_check['yesterday_close']:,.0f}",
+                help="Harga close kemarin (basis prediksi)"
+            )
+
+        with col2:
+            st.metric(
+                "Prediksi untuk Hari Ini",
+                f"Rp {accuracy_check['predicted_price']:,.0f}",
+                f"{accuracy_check['predicted_trend']}",
+                help="Apa yang diprediksi kemarin untuk hari ini"
+            )
+
+        with col3:
+            st.metric(
+                "Actual Hari Ini",
+                f"Rp {accuracy_check['today_actual']:,.0f}",
+                f"{accuracy_check['actual_trend']}",
+                help="Harga actual hari ini"
+            )
+
+        with col4:
+            st.metric(
+                "Accuracy Status",
+                f"{accuracy_check['status_icon']} {accuracy_check['status']}",
+                f"{accuracy_check['error_pct']:+.2f}%",
+                help="Error % dari prediksi"
+            )
+
+        # Detailed accuracy breakdown
+        col_a, col_b, col_c = st.columns(3)
+
+        with col_a:
+            st.markdown(f"""
+            **Price Error:**
+            - Predicted: Rp {accuracy_check['predicted_price']:,.0f}
+            - Actual: Rp {accuracy_check['today_actual']:,.0f}
+            - Error: Rp {accuracy_check['error']:+,.0f}
+            """)
+
+        with col_b:
+            st.markdown(f"""
+            **Error Percentage:**
+            - Error %: {accuracy_check['error_pct']:+.2f}%
+            - Abs Error %: {accuracy_check['abs_error_pct']:.2f}%
+            - Confidence: {accuracy_check['confidence']*100:.1f}%
+            """)
+
+        with col_c:
+            direction_icon = "✅" if accuracy_check['direction_correct'] else "❌"
+            st.markdown(f"""
+            **Direction Accuracy:**
+            - Predicted: {accuracy_check['predicted_trend']}
+            - Actual: {accuracy_check['actual_trend']}
+            - Match: {direction_icon} {"YES" if accuracy_check['direction_correct'] else "NO"}
+            """)
+
+        # Accuracy interpretation
+        if accuracy_check['status'] == "EXCELLENT":
+            st.success("🎯 **EXCELLENT!** Prediksi sangat akurat (error < 1%)")
+        elif accuracy_check['status'] == "GOOD":
+            st.success("✅ **GOOD!** Prediksi akurat (error < 2%)")
+        elif accuracy_check['status'] == "FAIR":
+            st.warning("🟡 **FAIR** - Prediksi cukup akurat (error < 3%)")
+        else:
+            st.error("❌ **POOR** - Prediksi kurang akurat (error ≥ 3%)")
+
+        if accuracy_check['direction_correct']:
+            st.success("✅ **Direction Correct!** Prediksi trend match dengan actual movement")
+        else:
+            st.error("❌ **Direction Wrong!** Prediksi trend tidak match dengan actual movement")
+
+        st.markdown("---")
 
     # Predictions Display
     pred_cols = st.columns(4)
