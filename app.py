@@ -333,6 +333,94 @@ def format_market_status_display(market_session):
         'icon': '❓'
     })
 
+def generate_realtime_wib_clock_html():
+    """
+    Generate HTML + JavaScript for real-time WIB clock that updates every second
+
+    Returns:
+        HTML string with embedded JavaScript for real-time clock
+    """
+    html = """
+    <style>
+        .wib-clock-container {
+            padding: 10px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .wib-clock-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .wib-clock-date {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .wib-clock-time {
+            font-size: 24px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+            margin-bottom: 3px;
+        }
+        .wib-clock-timezone {
+            font-size: 11px;
+            opacity: 0.9;
+        }
+    </style>
+
+    <div class="wib-clock-container">
+        <div class="wib-clock-title">🕐 Waktu Indonesia (WIB)</div>
+        <div class="wib-clock-date" id="wib-date">Loading...</div>
+        <div class="wib-clock-time" id="wib-time">--:--:--</div>
+        <div class="wib-clock-timezone">WIB (UTC+7)</div>
+    </div>
+
+    <script>
+        function updateWIBClock() {
+            // Get current UTC time
+            const now = new Date();
+
+            // Convert to WIB (UTC+7)
+            const wibOffset = 7 * 60; // 7 hours in minutes
+            const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+            const wibTime = new Date(utcTime + (wibOffset * 60000));
+
+            // Day names in Indonesian
+            const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                               'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+            // Get date components
+            const dayName = dayNames[wibTime.getDay()];
+            const date = wibTime.getDate();
+            const month = monthNames[wibTime.getMonth()];
+            const year = wibTime.getFullYear();
+
+            // Get time components
+            const hours = String(wibTime.getHours()).padStart(2, '0');
+            const minutes = String(wibTime.getMinutes()).padStart(2, '0');
+            const seconds = String(wibTime.getSeconds()).padStart(2, '0');
+
+            // Update display
+            document.getElementById('wib-date').textContent = `${dayName}, ${date} ${month} ${year}`;
+            document.getElementById('wib-time').textContent = `${hours}:${minutes}:${seconds}`;
+        }
+
+        // Update immediately
+        updateWIBClock();
+
+        // Update every second
+        setInterval(updateWIBClock, 1000);
+    </script>
+    """
+    return html
+
 # Helper functions
 @st.cache_data(ttl=1800)  # Cache for 30 minutes (more frequent updates)
 def fetch_stock_data(stock_code, period="6mo"):
@@ -1587,17 +1675,12 @@ st.sidebar.title("📊 Stock Prediction Settings")
 st.sidebar.markdown("---")
 
 # === WIB TIME & MARKET STATUS DISPLAY ===
-# Get current WIB time and market session
-current_wib = get_current_wib_time()
+# Get market session info
 market_session = get_idx_market_session()
 market_status_display = format_market_status_display(market_session)
 
-# Display time and status in sidebar
-st.sidebar.markdown(f"""
-### 🕐 Waktu Indonesia (WIB)
-**{current_wib['day_name_id']}, {current_wib['date']}**
-**Jam: {current_wib['time']}** WIB (UTC+7)
-""")
+# Display REAL-TIME WIB clock in sidebar (updates every second!)
+st.sidebar.markdown(generate_realtime_wib_clock_html(), unsafe_allow_html=True)
 
 # Market status with color coding
 if market_status_display['color'] == 'green':
