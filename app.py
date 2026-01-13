@@ -427,6 +427,298 @@ def calculate_technical_indicators(df):
 
     return df
 
+def get_adaptive_weights(df, latest, market_regime=None):
+    """
+    Adaptive Indicator Weighting based on market conditions
+
+    Returns optimized weights for different indicators based on:
+    - Volatility (high/low)
+    - Volume (high/low)
+    - Market Regime (bull/bear/sideways)
+    - Trend Strength (ADX)
+
+    Returns:
+        dict with weight multipliers for each indicator category
+    """
+    weights = {
+        'rsi': 1.0,
+        'mfi': 1.0,
+        'macd': 1.0,
+        'ma_alignment': 1.0,
+        'adx': 1.0,
+        'cci': 1.0,
+        'williams_r': 1.0,
+        'bb': 1.0,
+        'vwap': 1.0,
+        'volume': 1.0,
+        'stoch': 1.0,
+        'momentum': 1.0
+    }
+
+    if df is None or len(df) < 20 or latest is None:
+        return weights
+
+    # === VOLATILITY ANALYSIS ===
+    # Calculate recent volatility
+    if 'close' in df.columns and len(df) >= 10:
+        returns = df['close'].pct_change().tail(10)
+        recent_volatility = returns.std()
+
+        # High volatility (>2%)
+        if recent_volatility > 0.02:
+            # In high volatility:
+            # - Trust momentum indicators less (noise)
+            # - Trust mean reversion more (RSI, Stoch)
+            # - Trust volume analysis more
+            weights['rsi'] = 1.3
+            weights['stoch'] = 1.3
+            weights['mfi'] = 1.2
+            weights['volume'] = 1.4
+            weights['momentum'] = 0.7
+            weights['ma_alignment'] = 0.8
+
+        # Low volatility (<0.01%)
+        elif recent_volatility < 0.01:
+            # In low volatility:
+            # - Trust trend following more
+            # - Trust breakout indicators more
+            # - Trust mean reversion less
+            weights['ma_alignment'] = 1.3
+            weights['adx'] = 1.2
+            weights['macd'] = 1.3
+            weights['bb'] = 1.4  # BB squeeze important
+            weights['rsi'] = 0.8
+            weights['stoch'] = 0.8
+
+    # === VOLUME ANALYSIS ===
+    volume_ratio = latest.get('volume_ratio', 1.0)
+
+    # High volume (>1.5x average)
+    if volume_ratio > 1.5:
+        # Trust volume-based indicators more
+        weights['mfi'] = 1.3
+        weights['vwap'] = 1.3
+        weights['volume'] = 1.4
+        # Trust price-only indicators less
+        weights['rsi'] = 0.9
+        weights['williams_r'] = 0.9
+
+    # Low volume (<0.7x average)
+    elif volume_ratio < 0.7:
+        # Low volume = less reliable
+        weights['mfi'] = 0.7
+        weights['vwap'] = 0.7
+        weights['volume'] = 0.6
+        # Trust established trends more
+        weights['ma_alignment'] = 1.2
+        weights['adx'] = 1.2
+
+    # === TREND STRENGTH ANALYSIS (ADX) ===
+    adx = latest.get('adx', 25)
+
+    # Strong trend (ADX > 40)
+    if adx > 40:
+        # Trust trend-following indicators
+        weights['ma_alignment'] = 1.4
+        weights['adx'] = 1.5
+        weights['macd'] = 1.3
+        weights['momentum'] = 1.3
+        # Trust mean reversion less
+        weights['rsi'] = 0.7
+        weights['stoch'] = 0.7
+        weights['williams_r'] = 0.7
+
+    # Weak trend (ADX < 20) = Sideways
+    elif adx < 20:
+        # Trust mean reversion indicators
+        weights['rsi'] = 1.4
+        weights['stoch'] = 1.4
+        weights['williams_r'] = 1.3
+        weights['bb'] = 1.3
+        # Trust trend-following less
+        weights['ma_alignment'] = 0.7
+        weights['macd'] = 0.8
+        weights['momentum'] = 0.7
+
+    # === MARKET REGIME ANALYSIS ===
+    if market_regime:
+        regime = market_regime.get('regime', 'UNKNOWN')
+
+        # Bull market
+        if 'BULL' in regime:
+            # Trust bullish continuation signals more
+            weights['ma_alignment'] = 1.2
+            weights['momentum'] = 1.2
+            weights['macd'] = 1.2
+            # Don't oversell on dips
+            weights['rsi'] = 0.9
+            weights['stoch'] = 0.9
+
+        # Bear market
+        elif 'BEAR' in regime:
+            # Trust bearish continuation signals more
+            weights['rsi'] = 1.2  # Overbought rallies = sell
+            weights['stoch'] = 1.2
+            # Don't overbuy on rallies
+            weights['ma_alignment'] = 0.9
+            weights['momentum'] = 0.9
+
+        # Sideways market
+        elif 'SIDEWAYS' in regime:
+            # Mean reversion rules
+            weights['rsi'] = 1.3
+            weights['stoch'] = 1.3
+            weights['bb'] = 1.3
+            weights['williams_r'] = 1.2
+            # Trend following doesn't work
+            weights['ma_alignment'] = 0.7
+            weights['momentum'] = 0.7
+
+    # === BOLLINGER BANDS ANALYSIS (Squeeze Detection) ===
+    bb_width = latest.get('bb_width', 0.04)
+
+    # Tight squeeze (< 0.025) = Breakout imminent
+    if bb_width < 0.025:
+        weights['bb'] = 1.5
+        weights['volume'] = 1.3  # Volume confirms breakout
+        # Lower confidence in current state
+        weights['rsi'] = 0.8
+        weights['stoch'] = 0.8
+
+    return weights
+
+def get_multi_timeframe_alignment(df, current_price):
+    """
+    Multi-Timeframe Confirmation Analysis
+    Checks if short, medium, and long-term trends are aligned
+
+    Returns:
+        dict with alignment_score, confidence_boost, momentum_boost, details
+    """
+    if df is None or len(df) < 50:
+        return {
+            'alignment_score': 0,
+            'confidence_boost': 0,
+            'momentum_boost': 0,
+            'timeframes_aligned': 0,
+            'trend': 'UNKNOWN',
+            'details': 'Insufficient data'
+        }
+
+    timeframe_trends = []
+
+    # SHORT-TERM (5-day trend)
+    if len(df) >= 5:
+        price_5d = df.iloc[-5]['close']
+        sma_5 = df.tail(5)['close'].mean()
+        trend_5d = 'UP' if current_price > sma_5 and current_price > price_5d else 'DOWN'
+        strength_5d = abs((current_price - price_5d) / price_5d) * 100
+        timeframe_trends.append({
+            'name': 'Short (5d)',
+            'trend': trend_5d,
+            'strength': strength_5d
+        })
+
+    # MEDIUM-TERM (20-day trend)
+    if len(df) >= 20:
+        price_20d = df.iloc[-20]['close']
+        sma_20 = df.tail(20)['close'].mean()
+        trend_20d = 'UP' if current_price > sma_20 and current_price > price_20d else 'DOWN'
+        strength_20d = abs((current_price - price_20d) / price_20d) * 100
+        timeframe_trends.append({
+            'name': 'Medium (20d)',
+            'trend': trend_20d,
+            'strength': strength_20d
+        })
+
+    # LONG-TERM (50-day trend)
+    if len(df) >= 50:
+        price_50d = df.iloc[-50]['close']
+        sma_50 = df.tail(50)['close'].mean()
+        trend_50d = 'UP' if current_price > sma_50 and current_price > price_50d else 'DOWN'
+        strength_50d = abs((current_price - price_50d) / price_50d) * 100
+        timeframe_trends.append({
+            'name': 'Long (50d)',
+            'trend': trend_50d,
+            'strength': strength_50d
+        })
+
+    if len(timeframe_trends) < 3:
+        return {
+            'alignment_score': 0,
+            'confidence_boost': 0,
+            'momentum_boost': 0,
+            'timeframes_aligned': 0,
+            'trend': 'UNKNOWN',
+            'details': 'Insufficient timeframes'
+        }
+
+    # Check alignment
+    trends = [t['trend'] for t in timeframe_trends]
+
+    # Count aligned timeframes
+    up_count = trends.count('UP')
+    down_count = trends.count('DOWN')
+
+    if up_count == 3:
+        # Perfect bullish alignment
+        alignment_score = 3
+        dominant_trend = 'UP'
+        avg_strength = sum(t['strength'] for t in timeframe_trends) / 3
+
+        # Stronger alignment = higher boost
+        if avg_strength > 10:
+            confidence_boost = 0.10  # +10% confidence
+            momentum_boost = 35
+        elif avg_strength > 5:
+            confidence_boost = 0.08
+            momentum_boost = 25
+        else:
+            confidence_boost = 0.05
+            momentum_boost = 15
+
+    elif down_count == 3:
+        # Perfect bearish alignment
+        alignment_score = 3
+        dominant_trend = 'DOWN'
+        avg_strength = sum(t['strength'] for t in timeframe_trends) / 3
+
+        if avg_strength > 10:
+            confidence_boost = 0.10
+            momentum_boost = -35
+        elif avg_strength > 5:
+            confidence_boost = 0.08
+            momentum_boost = -25
+        else:
+            confidence_boost = 0.05
+            momentum_boost = -15
+
+    elif up_count == 2 or down_count == 2:
+        # Partial alignment (2 out of 3)
+        alignment_score = 2
+        dominant_trend = 'UP' if up_count == 2 else 'DOWN'
+        confidence_boost = 0.03  # +3% confidence
+        momentum_boost = 10 if up_count == 2 else -10
+
+    else:
+        # No alignment (mixed signals)
+        alignment_score = 0
+        dominant_trend = 'MIXED'
+        confidence_boost = 0
+        momentum_boost = 0
+
+    details = f"{alignment_score}/3 timeframes aligned {dominant_trend}"
+
+    return {
+        'alignment_score': alignment_score,
+        'confidence_boost': confidence_boost,
+        'momentum_boost': momentum_boost,
+        'timeframes_aligned': alignment_score,
+        'trend': dominant_trend,
+        'details': details,
+        'breakdown': timeframe_trends
+    }
+
 def generate_technical_predictions(df, current_price, volatility=0.02):
     """
     ENHANCED prediction engine with 12+ technical indicators
@@ -442,6 +734,10 @@ def generate_technical_predictions(df, current_price, volatility=0.02):
 
     latest = df.iloc[-1]
 
+    # === GET ADAPTIVE WEIGHTS BASED ON MARKET CONDITIONS ===
+    # This adjusts indicator weights based on volatility, volume, trend strength
+    adaptive_weights = get_adaptive_weights(df, latest, market_regime=None)
+
     # Calculate momentum score (-200 to +200) - increased range for more indicators
     momentum_score = 0
     confidence_factors = []
@@ -449,17 +745,18 @@ def generate_technical_predictions(df, current_price, volatility=0.02):
     # === INDICATOR 1: RSI (Relative Strength Index) ===
     rsi = latest.get('rsi', 50)
     if pd.notna(rsi):
+        rsi_weight = adaptive_weights['rsi']  # Apply adaptive weight
         if rsi < 30:
-            momentum_score += 25
+            momentum_score += 25 * rsi_weight
             confidence_factors.append(0.85)
         elif rsi < 40:
-            momentum_score += 15
+            momentum_score += 15 * rsi_weight
             confidence_factors.append(0.75)
         elif rsi > 70:
-            momentum_score -= 25
+            momentum_score -= 25 * rsi_weight
             confidence_factors.append(0.85)
         elif rsi > 60:
-            momentum_score -= 15
+            momentum_score -= 15 * rsi_weight
             confidence_factors.append(0.75)
         else:
             confidence_factors.append(0.65)
@@ -467,29 +764,31 @@ def generate_technical_predictions(df, current_price, volatility=0.02):
     # === INDICATOR 2: MFI (Money Flow Index) - Volume-weighted RSI ===
     mfi = latest.get('mfi', 50)
     if pd.notna(mfi):
+        mfi_weight = adaptive_weights['mfi']  # Apply adaptive weight
         if mfi < 20:  # Oversold with volume
-            momentum_score += 20
+            momentum_score += 20 * mfi_weight
             confidence_factors.append(0.8)
         elif mfi < 35:
-            momentum_score += 10
+            momentum_score += 10 * mfi_weight
             confidence_factors.append(0.7)
         elif mfi > 80:  # Overbought with volume
-            momentum_score -= 20
+            momentum_score -= 20 * mfi_weight
             confidence_factors.append(0.8)
         elif mfi > 65:
-            momentum_score -= 10
+            momentum_score -= 10 * mfi_weight
             confidence_factors.append(0.7)
 
     # === INDICATOR 3: MACD (Moving Average Convergence Divergence) ===
     macd = latest.get('macd', 0)
     macd_signal = latest.get('macd_signal', 0)
     if pd.notna(macd) and pd.notna(macd_signal):
+        macd_weight = adaptive_weights['macd']  # Apply adaptive weight
         macd_diff = macd - macd_signal
         if macd_diff > 0:
-            momentum_score += 15
+            momentum_score += 15 * macd_weight
             confidence_factors.append(0.8)
         else:
-            momentum_score -= 15
+            momentum_score -= 15 * macd_weight
             confidence_factors.append(0.8)
 
     # === INDICATOR 4: Moving Average Alignment (Multiple Timeframes) ===
@@ -499,35 +798,36 @@ def generate_technical_predictions(df, current_price, volatility=0.02):
     ema_200 = latest.get('ema_200', current_price)
 
     if pd.notna(sma_10) and pd.notna(sma_20) and pd.notna(sma_50):
+        ma_weight = adaptive_weights['ma_alignment']  # Apply adaptive weight
         # Perfect bullish alignment
         if current_price > sma_10 > sma_20 > sma_50:
-            momentum_score += 30
+            momentum_score += 30 * ma_weight
             confidence_factors.append(0.9)
         # Perfect bearish alignment
         elif current_price < sma_10 < sma_20 < sma_50:
-            momentum_score -= 30
+            momentum_score -= 30 * ma_weight
             confidence_factors.append(0.9)
         # Partial bullish
         elif current_price > sma_20 > sma_50:
-            momentum_score += 20
+            momentum_score += 20 * ma_weight
             confidence_factors.append(0.8)
         # Partial bearish
         elif current_price < sma_20 < sma_50:
-            momentum_score -= 20
+            momentum_score -= 20 * ma_weight
             confidence_factors.append(0.8)
         elif current_price > sma_20:
-            momentum_score += 10
+            momentum_score += 10 * ma_weight
             confidence_factors.append(0.7)
         else:
-            momentum_score -= 10
+            momentum_score -= 10 * ma_weight
             confidence_factors.append(0.7)
 
     # Long-term trend (EMA 200)
     if pd.notna(ema_200):
         if current_price > ema_200:
-            momentum_score += 10
+            momentum_score += 10 * ma_weight
         else:
-            momentum_score -= 10
+            momentum_score -= 10 * ma_weight
 
     # === INDICATOR 5: ADX (Trend Strength) ===
     adx = latest.get('adx', 25)
@@ -535,13 +835,14 @@ def generate_technical_predictions(df, current_price, volatility=0.02):
     adx_neg = latest.get('adx_neg', 25)
 
     if pd.notna(adx):
+        adx_weight = adaptive_weights['adx']  # Apply adaptive weight
         # Strong trend
         if adx > 40:
             confidence_factors.append(0.9)  # High confidence in strong trend
             if adx_pos > adx_neg:
-                momentum_score += 15
+                momentum_score += 15 * adx_weight
             else:
-                momentum_score -= 15
+                momentum_score -= 15 * adx_weight
         # Weak trend
         elif adx < 20:
             confidence_factors.append(0.6)  # Low confidence in weak trend
@@ -551,20 +852,22 @@ def generate_technical_predictions(df, current_price, volatility=0.02):
     # === INDICATOR 6: CCI (Commodity Channel Index) ===
     cci = latest.get('cci', 0)
     if pd.notna(cci):
+        cci_weight = adaptive_weights['cci']  # Apply adaptive weight
         if cci > 100:
-            momentum_score += 15
+            momentum_score += 15 * cci_weight
             confidence_factors.append(0.75)
         elif cci < -100:
-            momentum_score -= 15
+            momentum_score -= 15 * cci_weight
             confidence_factors.append(0.75)
 
     # === INDICATOR 7: Williams %R ===
     williams_r = latest.get('williams_r', -50)
     if pd.notna(williams_r):
+        williams_weight = adaptive_weights['williams_r']  # Apply adaptive weight
         if williams_r > -20:  # Overbought
-            momentum_score -= 10
+            momentum_score -= 10 * williams_weight
         elif williams_r < -80:  # Oversold
-            momentum_score += 10
+            momentum_score += 10 * williams_weight
 
     # === INDICATOR 8: Bollinger Bands Position ===
     bb_upper = latest.get('bb_upper', current_price * 1.02)
@@ -572,12 +875,13 @@ def generate_technical_predictions(df, current_price, volatility=0.02):
     bb_width = latest.get('bb_width', 0.04)
 
     if pd.notna(bb_upper) and pd.notna(bb_lower):
+        bb_weight = adaptive_weights['bb']  # Apply adaptive weight
         bb_position = (current_price - bb_lower) / (bb_upper - bb_lower)
         if bb_position < 0.1:
-            momentum_score += 20
+            momentum_score += 20 * bb_weight
             confidence_factors.append(0.8)
         elif bb_position > 0.9:
-            momentum_score -= 20
+            momentum_score -= 20 * bb_weight
             confidence_factors.append(0.8)
 
         # BB Squeeze (low volatility = breakout soon)
@@ -587,19 +891,21 @@ def generate_technical_predictions(df, current_price, volatility=0.02):
     # === INDICATOR 9: VWAP (Volume Weighted Average Price) ===
     vwap = latest.get('vwap', current_price)
     if pd.notna(vwap):
+        vwap_weight = adaptive_weights['vwap']  # Apply adaptive weight
         if current_price > vwap * 1.01:
-            momentum_score += 10
+            momentum_score += 10 * vwap_weight
         elif current_price < vwap * 0.99:
-            momentum_score -= 10
+            momentum_score -= 10 * vwap_weight
 
     # === INDICATOR 10: Volume Analysis ===
     volume_ratio = latest.get('volume_ratio', 1.0)
     if pd.notna(volume_ratio):
+        volume_weight = adaptive_weights['volume']  # Apply adaptive weight
         if volume_ratio > 2.0:
             # Very high volume - strong signal
-            confidence_factors.append(0.9)
+            confidence_factors.append(0.9 * volume_weight)
         elif volume_ratio > 1.5:
-            confidence_factors.append(0.85)
+            confidence_factors.append(0.85 * volume_weight)
         elif volume_ratio < 0.7:
             confidence_factors.append(0.6)
         else:
@@ -610,35 +916,49 @@ def generate_technical_predictions(df, current_price, volatility=0.02):
     stoch_d = latest.get('stoch_d', 50)
 
     if pd.notna(stoch_k) and pd.notna(stoch_d):
+        stoch_weight = adaptive_weights['stoch']  # Apply adaptive weight
         if stoch_k < 20 and stoch_d < 20:
-            momentum_score += 15
+            momentum_score += 15 * stoch_weight
         elif stoch_k > 80 and stoch_d > 80:
-            momentum_score -= 15
+            momentum_score -= 15 * stoch_weight
 
     # === INDICATOR 12: Multi-Timeframe Price Momentum ===
+    momentum_weight = adaptive_weights['momentum']  # Apply adaptive weight
     if len(df) >= 3:
         price_3d_ago = df.iloc[-3]['close']
         momentum_3d = ((current_price - price_3d_ago) / price_3d_ago) * 100
         if momentum_3d > 3:
-            momentum_score += 10
+            momentum_score += 10 * momentum_weight
         elif momentum_3d < -3:
-            momentum_score -= 10
+            momentum_score -= 10 * momentum_weight
 
     if len(df) >= 5:
         price_5d_ago = df.iloc[-5]['close']
         momentum_5d = ((current_price - price_5d_ago) / price_5d_ago) * 100
         if momentum_5d > 5:
-            momentum_score += 15
+            momentum_score += 15 * momentum_weight
         elif momentum_5d < -5:
-            momentum_score -= 15
+            momentum_score -= 15 * momentum_weight
 
     if len(df) >= 10:
         price_10d_ago = df.iloc[-10]['close']
         momentum_10d = ((current_price - price_10d_ago) / price_10d_ago) * 100
         if momentum_10d > 10:
-            momentum_score += 20
+            momentum_score += 20 * momentum_weight
         elif momentum_10d < -10:
-            momentum_score -= 20
+            momentum_score -= 20 * momentum_weight
+
+    # === INDICATOR 13: Multi-Timeframe Alignment (NEW!) ===
+    # This checks if short, medium, and long-term trends are all aligned
+    # Perfect alignment (3/3) gives HUGE confidence and momentum boost
+    mtf_alignment = get_multi_timeframe_alignment(df, current_price)
+
+    # Apply momentum boost from alignment
+    momentum_score += mtf_alignment['momentum_boost']
+
+    # Add confidence boost (will be applied later)
+    if mtf_alignment['confidence_boost'] > 0:
+        confidence_factors.append(0.9)  # High confidence when timeframes align
 
     # === DAY OF WEEK PATTERN (IDX specific) ===
     try:
@@ -673,6 +993,9 @@ def generate_technical_predictions(df, current_price, volatility=0.02):
 
     # Calculate base confidence from all factors
     base_confidence = np.mean(confidence_factors) if confidence_factors else 0.65
+
+    # Apply multi-timeframe alignment confidence boost
+    base_confidence = min(base_confidence + mtf_alignment['confidence_boost'], 0.98)
 
     # Determine trend with tighter thresholds
     if normalized_momentum > 0.25:
@@ -754,6 +1077,7 @@ def generate_technical_predictions(df, current_price, volatility=0.02):
         predictions[timeframe]['confidence'] = np.clip(predictions[timeframe]['confidence'], 0.55, 0.92)
         predictions[timeframe]['momentum_score'] = momentum_score
         predictions[timeframe]['indicators_used'] = len(confidence_factors)
+        predictions[timeframe]['mtf_alignment'] = mtf_alignment  # Multi-timeframe alignment info
 
         # FINAL VALIDATION: Verify trend matches price movement
         price_change_pct = ((predictions[timeframe]['price'] - current_price) / current_price) * 100
@@ -2123,6 +2447,18 @@ with tab2:
 
             trend_color = "🟢" if pred['trend'] == "UP" else "🔴" if pred['trend'] == "DOWN" else "🟡"
             st.markdown(f"**Trend:** {trend_color} {pred['trend']}")
+
+            # Display multi-timeframe alignment (NEW!)
+            if 'mtf_alignment' in pred:
+                alignment = pred['mtf_alignment']
+                if alignment['alignment_score'] == 3:
+                    # Perfect alignment - show with emphasis
+                    st.markdown(f"🎯 **ALL TIMEFRAMES ALIGNED {alignment['trend']}**")
+                    st.caption(f"✅ {alignment['details']}")
+                elif alignment['alignment_score'] == 2:
+                    st.caption(f"⚡ {alignment['details']}")
+                elif alignment['alignment_score'] > 0:
+                    st.caption(f"📊 {alignment['details']}")
 
             # Display target date and time (MARKET TIME)
             st.markdown(f"📅 **{day_name}**")
