@@ -719,10 +719,10 @@ def get_multi_timeframe_alignment(df, current_price):
         'breakdown': timeframe_trends
     }
 
-def generate_technical_predictions(df, current_price, volatility=0.02):
+def generate_technical_predictions(df, current_price, volatility=0.02, sentiment_result=None):
     """
-    ENHANCED prediction engine with 12+ technical indicators
-    More accurate predictions by feeding more data
+    ENHANCED prediction engine with 13+ technical indicators + NEWS SENTIMENT
+    More accurate predictions by feeding more data + news analysis from 10 sources
     """
     if df is None or len(df) < 20:
         return {
@@ -948,7 +948,7 @@ def generate_technical_predictions(df, current_price, volatility=0.02):
         elif momentum_10d < -10:
             momentum_score -= 20 * momentum_weight
 
-    # === INDICATOR 13: Multi-Timeframe Alignment (NEW!) ===
+    # === INDICATOR 13: Multi-Timeframe Alignment ===
     # This checks if short, medium, and long-term trends are all aligned
     # Perfect alignment (3/3) gives HUGE confidence and momentum boost
     mtf_alignment = get_multi_timeframe_alignment(df, current_price)
@@ -959,6 +959,51 @@ def generate_technical_predictions(df, current_price, volatility=0.02):
     # Add confidence boost (will be applied later)
     if mtf_alignment['confidence_boost'] > 0:
         confidence_factors.append(0.9)  # High confidence when timeframes align
+
+    # === INDICATOR 14: NEWS SENTIMENT (NEW - VERY POWERFUL!) ===
+    # Sentiment from 10+ Indonesian financial news sources
+    # Includes 200+ keywords + fundamental event detection
+    sentiment_momentum = 0
+    fundamental_events = []
+
+    if sentiment_result:
+        sentiment_score = sentiment_result.get('average_score', 0)
+        total_articles = sentiment_result.get('total_articles', 0)
+
+        # Convert sentiment score (-1 to +1) to momentum (-50 to +50)
+        # News sentiment is VERY powerful, so we give it strong weight
+        sentiment_momentum = sentiment_score * 50  # Max ±50 momentum
+
+        # Boost if many articles (high media attention = important signal)
+        if total_articles >= 20:
+            sentiment_momentum *= 1.3  # 30% boost for high coverage
+            confidence_factors.append(0.90)
+        elif total_articles >= 10:
+            sentiment_momentum *= 1.15  # 15% boost for medium coverage
+            confidence_factors.append(0.85)
+        elif total_articles >= 5:
+            confidence_factors.append(0.75)
+        else:
+            confidence_factors.append(0.65)  # Low article count = less reliable
+
+        # FUNDAMENTAL EVENTS - MASSIVE IMPACT!
+        # Check if any article has fundamental events
+        for article_sent in sentiment_result.get('article_sentiments', []):
+            if article_sent.get('has_fundamental_event'):
+                for event in article_sent.get('fundamental_events', []):
+                    fundamental_events.append(event)
+
+        # Apply fundamental event boost (each event = ±25 momentum!)
+        for event in fundamental_events:
+            if event['type'] == 'positive':
+                sentiment_momentum += 25  # Huge bullish boost!
+                confidence_factors.append(0.95)  # Very high confidence
+            else:
+                sentiment_momentum -= 25  # Huge bearish impact!
+                confidence_factors.append(0.95)
+
+        # Apply sentiment momentum to total score
+        momentum_score += sentiment_momentum
 
     # === DAY OF WEEK PATTERN (IDX specific) ===
     try:
@@ -1676,14 +1721,31 @@ with st.spinner("📊 Analyzing IHSG correlation & market regime..."):
 with st.spinner("🔍 Analyzing stock movement patterns..."):
     movement_analysis = stock_analyzer.analyze_full(df)
 
+# === NEWS & SENTIMENT ANALYSIS (MOVED BEFORE PREDICTIONS!) ===
+# Scrape news and analyze sentiment from 10+ sources
+with st.spinner("📰 Fetching latest news from 10+ sources & analyzing sentiment..."):
+    try:
+        news_df = news_scraper.scrape_all(selected_stock, limit=3)  # 3 per source = 30 total
+        if not news_df.empty:
+            news_articles = news_df.to_dict('records')
+            sentiment_result = sentiment_analyzer.analyze_articles(news_articles)
+        else:
+            news_articles = []
+            sentiment_result = None
+    except Exception as e:
+        news_articles = []
+        sentiment_result = None
+
 # === PREDICTION PHASE ===
 # Generate predictions using LSTM or fallback to technical predictions
-with st.spinner("🤖 Generating AI predictions..."):
+# NOW WITH NEWS SENTIMENT INTEGRATION!
+with st.spinner("🤖 Generating AI predictions with news sentiment..."):
     predictions = predictor.predict_multiple_horizons(df, selected_stock, current_price)
 
     # Fallback to technical predictions if LSTM confidence is too low
     if not predictor.model_loaded or predictions.get('1d', {}).get('confidence', 0) < 0.6:
-        technical_predictions = generate_technical_predictions(df, current_price)
+        # Pass sentiment_result to enhance predictions!
+        technical_predictions = generate_technical_predictions(df, current_price, sentiment_result=sentiment_result)
         # Merge predictions (prefer LSTM if available, else use technical)
         for timeframe in ['1h', '4h', '1d', '3d']:
             if timeframe in technical_predictions and timeframe in predictions:
@@ -1694,20 +1756,6 @@ with st.spinner("🤖 Generating AI predictions..."):
                 predictions[timeframe]['confidence'] = max(tech_pred['confidence'], lstm_pred.get('confidence', 0.5))
                 if 'momentum_score' in tech_pred:
                     predictions[timeframe]['momentum_score'] = tech_pred['momentum_score']
-
-# Scrape news and analyze sentiment
-with st.spinner("📰 Fetching latest news & analyzing sentiment..."):
-    try:
-        news_df = news_scraper.scrape_all(selected_stock, limit=5)
-        if not news_df.empty:
-            news_articles = news_df.to_dict('records')
-            sentiment_result = sentiment_analyzer.analyze_articles(news_articles)
-        else:
-            news_articles = []
-            sentiment_result = None
-    except Exception as e:
-        news_articles = []
-        sentiment_result = None
 
 # === SIGNAL GENERATION ===
 # Generate trading signal (combining technical + bandar + predictions)
