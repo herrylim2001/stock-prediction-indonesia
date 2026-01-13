@@ -244,6 +244,95 @@ def calculate_market_target_time(hours_ahead):
         'is_valid': True
     }
 
+def get_current_wib_time():
+    """
+    Get current time in WIB (Waktu Indonesia Barat / UTC+7)
+
+    Returns:
+        dict with datetime object and formatted strings
+    """
+    wib = pytz.timezone('Asia/Jakarta')
+    now_wib = datetime.now(wib)
+
+    return {
+        'datetime': now_wib,
+        'date': now_wib.strftime('%d %B %Y'),  # e.g., "13 Januari 2026"
+        'time': now_wib.strftime('%H:%M:%S'),  # e.g., "14:35:20"
+        'time_short': now_wib.strftime('%H:%M'),  # e.g., "14:35"
+        'day_name': now_wib.strftime('%A'),  # e.g., "Monday"
+        'day_name_id': ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'][now_wib.weekday()],
+        'timezone': 'WIB (UTC+7)',
+        'is_weekend': now_wib.weekday() >= 5
+    }
+
+def format_market_status_display(market_session):
+    """
+    Format market status for display with color coding
+
+    Returns:
+        dict with status, color, icon
+    """
+    session = market_session.get('session', 'UNKNOWN')
+
+    # Status configurations
+    status_config = {
+        'SESSION_1': {
+            'status': '🟢 MARKET OPEN',
+            'color': 'green',
+            'detail': market_session.get('message', 'Trading aktif'),
+            'icon': '📈'
+        },
+        'SESSION_2': {
+            'status': '🟢 MARKET OPEN',
+            'color': 'green',
+            'detail': market_session.get('message', 'Trading aktif'),
+            'icon': '📈'
+        },
+        'LUNCH_BREAK': {
+            'status': '🟡 LUNCH BREAK',
+            'color': 'orange',
+            'detail': market_session.get('message', 'Istirahat siang'),
+            'icon': '🍽️'
+        },
+        'PRE_MARKET': {
+            'status': '🟡 PRE-MARKET',
+            'color': 'orange',
+            'detail': market_session.get('message', 'Sebelum market buka'),
+            'icon': '⏰'
+        },
+        'AFTER_HOURS': {
+            'status': '🟡 AFTER HOURS',
+            'color': 'orange',
+            'detail': market_session.get('message', 'Setelah market tutup'),
+            'icon': '🌆'
+        },
+        'WEEKEND': {
+            'status': '🔴 MARKET CLOSED',
+            'color': 'red',
+            'detail': 'Weekend - Market tutup',
+            'icon': '🏖️'
+        },
+        'CLOSED': {
+            'status': '🔴 MARKET CLOSED',
+            'color': 'red',
+            'detail': market_session.get('message', 'Market sudah tutup'),
+            'icon': '🌙'
+        },
+        'PRE-OPEN': {
+            'status': '🔴 MARKET CLOSED',
+            'color': 'red',
+            'detail': market_session.get('message', 'Market belum buka'),
+            'icon': '🌅'
+        }
+    }
+
+    return status_config.get(session, {
+        'status': '⚪ UNKNOWN',
+        'color': 'gray',
+        'detail': 'Status tidak diketahui',
+        'icon': '❓'
+    })
+
 # Helper functions
 @st.cache_data(ttl=1800)  # Cache for 30 minutes (more frequent updates)
 def fetch_stock_data(stock_code, period="6mo"):
@@ -1495,6 +1584,62 @@ def calculate_lot_recommendation(current_price, modal_total, risk_per_trade, sto
 
 # Sidebar
 st.sidebar.title("📊 Stock Prediction Settings")
+st.sidebar.markdown("---")
+
+# === WIB TIME & MARKET STATUS DISPLAY ===
+# Get current WIB time and market session
+current_wib = get_current_wib_time()
+market_session = get_idx_market_session()
+market_status_display = format_market_status_display(market_session)
+
+# Display time and status in sidebar
+st.sidebar.markdown(f"""
+### 🕐 Waktu Indonesia (WIB)
+**{current_wib['day_name_id']}, {current_wib['date']}**
+**Jam: {current_wib['time']}** WIB (UTC+7)
+""")
+
+# Market status with color coding
+if market_status_display['color'] == 'green':
+    st.sidebar.success(f"{market_status_display['icon']} **{market_status_display['status']}**\n\n{market_status_display['detail']}")
+elif market_status_display['color'] == 'orange':
+    st.sidebar.warning(f"{market_status_display['icon']} **{market_status_display['status']}**\n\n{market_status_display['detail']}")
+elif market_status_display['color'] == 'red':
+    st.sidebar.error(f"{market_status_display['icon']} **{market_status_display['status']}**\n\n{market_status_display['detail']}")
+else:
+    st.sidebar.info(f"{market_status_display['icon']} **{market_status_display['status']}**\n\n{market_status_display['detail']}")
+
+# Show additional session info if trading is active
+if market_session.get('is_trading'):
+    time_remaining = market_session.get('time_remaining_minutes', 0)
+    hours_remaining = time_remaining // 60
+    mins_remaining = time_remaining % 60
+    st.sidebar.caption(f"⏱️ Waktu tersisa: {hours_remaining}h {mins_remaining}m")
+elif market_session.get('time_to_open_minutes'):
+    time_to_open = market_session.get('time_to_open_minutes', 0)
+    hours_to_open = time_to_open // 60
+    mins_to_open = time_to_open % 60
+    if hours_to_open > 0:
+        st.sidebar.caption(f"⏰ Market buka dalam: {hours_to_open}h {mins_to_open}m")
+    else:
+        st.sidebar.caption(f"⏰ Market buka dalam: {mins_to_open} menit")
+
+# Market hours info
+with st.sidebar.expander("ℹ️ Info Jam Market IDX"):
+    st.markdown("""
+    **Jam Trading IDX:**
+    - **Sesi 1:** 09:00 - 12:00 WIB
+    - **Istirahat:** 12:00 - 13:00 WIB
+    - **Sesi 2:** 13:00 - 16:00 WIB
+
+    **Hari Trading:**
+    - Senin - Jumat
+    - Sabtu & Minggu: TUTUP
+
+    **Pre-market:** 08:45 - 09:00 WIB
+    **After-hours:** 16:00 - 16:15 WIB
+    """)
+
 st.sidebar.markdown("---")
 
 # Stock selection
