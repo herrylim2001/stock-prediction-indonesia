@@ -3,6 +3,7 @@ Indonesian Stock Prediction Dashboard
 Streamlit Demo Application
 """
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import numpy as np
 import yfinance as yf
@@ -390,42 +391,59 @@ def generate_realtime_wib_clock_html():
         <div class="wib-clock-timezone">WIB (UTC+7)</div>
     </div>
 
-    <script>
-        function updateWIBClock() {
-            // Get current UTC time
-            const now = new Date();
+    <script type="text/javascript">
+        (function() {
+            function updateWIBClock() {
+                try {
+                    // Get current UTC time
+                    const now = new Date();
 
-            // Convert to WIB (UTC+7)
-            const wibOffset = 7 * 60; // 7 hours in minutes
-            const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
-            const wibTime = new Date(utcTime + (wibOffset * 60000));
+                    // Convert to WIB (UTC+7)
+                    const wibOffset = 7 * 60; // 7 hours in minutes
+                    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+                    const wibTime = new Date(utcTime + (wibOffset * 60000));
 
-            // Day names in Indonesian
-            const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-            const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-                               'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+                    // Day names in Indonesian
+                    const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                    const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                                       'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
-            // Get date components
-            const dayName = dayNames[wibTime.getDay()];
-            const date = wibTime.getDate();
-            const month = monthNames[wibTime.getMonth()];
-            const year = wibTime.getFullYear();
+                    // Get date components
+                    const dayName = dayNames[wibTime.getDay()];
+                    const date = wibTime.getDate();
+                    const month = monthNames[wibTime.getMonth()];
+                    const year = wibTime.getFullYear();
 
-            // Get time components
-            const hours = String(wibTime.getHours()).padStart(2, '0');
-            const minutes = String(wibTime.getMinutes()).padStart(2, '0');
-            const seconds = String(wibTime.getSeconds()).padStart(2, '0');
+                    // Get time components
+                    const hours = String(wibTime.getHours()).padStart(2, '0');
+                    const minutes = String(wibTime.getMinutes()).padStart(2, '0');
+                    const seconds = String(wibTime.getSeconds()).padStart(2, '0');
 
-            // Update display
-            document.getElementById('wib-date').textContent = `${dayName}, ${date} ${month} ${year}`;
-            document.getElementById('wib-time').textContent = `${hours}:${minutes}:${seconds}`;
-        }
+                    // Update display
+                    const dateEl = document.getElementById('wib-date');
+                    const timeEl = document.getElementById('wib-time');
 
-        // Update immediately
-        updateWIBClock();
+                    if (dateEl && timeEl) {
+                        dateEl.textContent = dayName + ', ' + date + ' ' + month + ' ' + year;
+                        timeEl.textContent = hours + ':' + minutes + ':' + seconds;
+                    }
+                } catch(e) {
+                    console.error('WIB Clock error:', e);
+                }
+            }
 
-        // Update every second
-        setInterval(updateWIBClock, 1000);
+            // Wait for DOM to be ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    updateWIBClock();
+                    setInterval(updateWIBClock, 1000);
+                });
+            } else {
+                // DOM is already ready
+                updateWIBClock();
+                setInterval(updateWIBClock, 1000);
+            }
+        })();
     </script>
     """
     return html
@@ -1744,7 +1762,9 @@ market_session = get_idx_market_session()
 market_status_display = format_market_status_display(market_session)
 
 # Display REAL-TIME WIB clock in sidebar (updates every second!)
-st.sidebar.markdown(generate_realtime_wib_clock_html(), unsafe_allow_html=True)
+# Using st.components.html to ensure JavaScript runs properly
+with st.sidebar:
+    components.html(generate_realtime_wib_clock_html(), height=130, scrolling=False)
 
 # Market status with color coding
 if market_status_display['color'] == 'green':
