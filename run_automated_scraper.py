@@ -15,7 +15,7 @@ from services.automated_scraper import AutomatedScraperService
 # Stock list - customize as needed
 STOCK_LIST = [
     'BBCA', 'BBRI', 'BMRI', 'TLKM', 'ASII',
-    'UNVR', 'GOTO', 'ACES', 'ICBP', 'EMTK', 'SUPA'
+    'UNVR', 'GOTO', 'ACES', 'ICBP', 'EMTK', 'SUPA', 'BREN'
 ]
 
 

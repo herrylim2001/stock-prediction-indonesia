@@ -294,7 +294,7 @@ def main():
     # Stock list - you can customize this
     STOCK_LIST = [
         'BBCA', 'BBRI', 'BMRI', 'TLKM', 'ASII',
-        'UNVR', 'GOTO', 'ACES', 'ICBP', 'EMTK', 'SUPA'
+        'UNVR', 'GOTO', 'ACES', 'ICBP', 'EMTK', 'SUPA', 'BREN'
     ]
 
     # Initialize service

@@ -58,6 +58,7 @@ STOCKS = {
     "ICBP": {"name": "Indofood CBP", "sector": "Consumer Goods"},
     "EMTK": {"name": "Elang Mahkota Teknologi", "sector": "Media & Teknologi"},
     "SUPA": {"name": "Sinarmas Multiartha (Super Bank)", "sector": "Keuangan"},
+    "BREN": {"name": "Barito Renewables Energy", "sector": "Energi Terbarukan"},
 }
 
 # IDX Market Session Detection
