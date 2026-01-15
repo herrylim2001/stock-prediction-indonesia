@@ -37,6 +37,14 @@ except ImportError:
     DATABASE_AVAILABLE = False
     print("⚠️ Database module not available - running without historical sentiment trends")
 
+# Import IDX holidays checker
+try:
+    from utils.idx_holidays import is_idx_holiday, get_next_trading_day, get_holiday_name
+    HOLIDAYS_AVAILABLE = True
+except ImportError:
+    HOLIDAYS_AVAILABLE = False
+    print("⚠️ IDX holidays module not available - running without holiday detection")
+
 # Page config
 st.set_page_config(
     page_title="Indonesian Stock Prediction",
@@ -66,7 +74,7 @@ def get_idx_market_session():
     """
     Detect current IDX market session (WIB timezone)
     IDX Trading Hours:
-    - Monday-Friday only
+    - Monday-Friday only (except national holidays)
     - Session 1: 09:00-12:00 WIB
     - Lunch Break: 12:00-13:00 WIB
     - Session 2: 13:00-16:00 WIB
@@ -76,11 +84,27 @@ def get_idx_market_session():
     wib = pytz.timezone('Asia/Jakarta')
     now_wib = datetime.now(wib)
 
+    # Check if national holiday (PRIORITY CHECK!)
+    if HOLIDAYS_AVAILABLE:
+        is_holiday, holiday_name = is_idx_holiday(now_wib.date())
+        if is_holiday:
+            next_trading_day = get_next_trading_day(now_wib.date())
+            next_open_str = next_trading_day.strftime('%A, %d %B')
+            return {
+                'session': 'HOLIDAY',
+                'is_trading': False,
+                'is_holiday': True,
+                'holiday_name': holiday_name,
+                'next_open': f'{next_open_str} 09:00 WIB',
+                'message': f'Hari Libur Nasional: {holiday_name}'
+            }
+
     # Check if weekend
     if now_wib.weekday() >= 5:  # Saturday = 5, Sunday = 6
         return {
             'session': 'WEEKEND',
             'is_trading': False,
+            'is_holiday': False,
             'next_open': 'Monday 09:00 WIB',
             'message': 'Market closed - Weekend'
         }
@@ -316,6 +340,12 @@ def format_market_status_display(market_session):
             'color': 'orange',
             'detail': market_session.get('message', 'Setelah market tutup'),
             'icon': '🌆'
+        },
+        'HOLIDAY': {
+            'status': '🔴 HARI LIBUR NASIONAL',
+            'color': 'red',
+            'detail': market_session.get('message', 'Hari Libur Nasional'),
+            'icon': '🎊'
         },
         'WEEKEND': {
             'status': '🔴 MARKET CLOSED',
@@ -1791,6 +1821,14 @@ elif market_session.get('time_to_open_minutes'):
         st.sidebar.caption(f"⏰ Market buka dalam: {hours_to_open}h {mins_to_open}m")
     else:
         st.sidebar.caption(f"⏰ Market buka dalam: {mins_to_open} menit")
+
+# Show next trading day if market closed (holiday/weekend)
+if market_session.get('session') in ['HOLIDAY', 'WEEKEND'] and market_session.get('next_open'):
+    st.sidebar.caption(f"📅 Trading berikutnya: {market_session['next_open']}")
+
+# Show holiday name if it's a holiday
+if market_session.get('is_holiday') and market_session.get('holiday_name'):
+    st.sidebar.info(f"🎊 **{market_session['holiday_name']}**")
 
 # Market hours info
 with st.sidebar.expander("ℹ️ Info Jam Market IDX"):
