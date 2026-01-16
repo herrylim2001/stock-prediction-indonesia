@@ -253,6 +253,87 @@ class MultibaggerTracker:
             signal = 'STRONG_SELL'
             color = 'error'
 
+        # Calculate entry, target, and stop loss prices
+        current_price = metrics['current_price']
+        day_high = metrics['day_high']
+        day_low = metrics['day_low']
+        atr = metrics['day_range']  # Use day range as proxy for ATR
+
+        # Entry point logic
+        if signal in ['STRONG_BUY', 'BUY']:
+            # For buy signals
+            # Entry: Current price or slightly below for better entry
+            if metrics['position_in_range'] > 0.7:
+                # Price near high, wait for pullback
+                entry_price = current_price * 0.995  # 0.5% below current
+                entry_timing = "Wait for small pullback"
+            else:
+                # Good entry now
+                entry_price = current_price
+                entry_timing = "Buy now / market price"
+
+            # Target based on signal strength
+            if signal == 'STRONG_BUY':
+                target_pct = 0.03 + (signal_score / 100 * 0.02)  # 3-5% target
+                target_price = current_price * (1 + target_pct)
+            else:  # BUY
+                target_pct = 0.02 + (signal_score / 100 * 0.015)  # 2-3.5% target
+                target_price = current_price * (1 + target_pct)
+
+            # Stop loss: 1.5-2% below entry
+            stop_loss_pct = 0.015 + (atr / current_price * 0.5)  # Dynamic based on volatility
+            stop_loss_price = entry_price * (1 - stop_loss_pct)
+
+            # Risk/Reward ratio
+            potential_profit = target_price - entry_price
+            potential_loss = entry_price - stop_loss_price
+            risk_reward = potential_profit / potential_loss if potential_loss > 0 else 0
+
+        elif signal in ['SELL', 'STRONG_SELL']:
+            # For sell signals (if holding)
+            # Exit: Current price or slightly above for better exit
+            entry_price = current_price  # If selling, sell at current
+            entry_timing = "Sell now / take profit"
+
+            # Target (for short, not applicable for most retail)
+            target_price = current_price * 0.97  # 3% down
+
+            # Stop loss (if shorting)
+            stop_loss_price = current_price * 1.02  # 2% above
+
+            risk_reward = 0
+
+        else:  # HOLD
+            # For hold signals
+            entry_price = None
+            entry_timing = "Wait for better signal"
+            target_price = None
+            stop_loss_price = None
+            risk_reward = 0
+
+        # Support and resistance levels (simple calculation)
+        # Support: Recent lows
+        support_level = day_low
+
+        # Resistance: Recent highs
+        resistance_level = day_high
+
+        # Best time to trade
+        if signal in ['STRONG_BUY', 'BUY']:
+            if metrics['position_in_range'] < 0.3:
+                best_time = "NOW - Price near support"
+            elif metrics['position_in_range'] > 0.7:
+                best_time = "Wait for pullback to support"
+            else:
+                best_time = "Good entry range"
+        elif signal in ['SELL', 'STRONG_SELL']:
+            if metrics['position_in_range'] > 0.7:
+                best_time = "NOW - Price near resistance"
+            else:
+                best_time = "Sell on bounce"
+        else:
+            best_time = "Wait for clearer signal"
+
         return {
             'signal': signal,
             'strength': abs(signal_score),
@@ -260,7 +341,16 @@ class MultibaggerTracker:
             'color': color,
             'reasons': reasons,
             'rsi': rsi,
-            'metrics': metrics
+            'metrics': metrics,
+            # Entry/Exit information
+            'entry_price': entry_price,
+            'entry_timing': entry_timing,
+            'target_price': target_price,
+            'stop_loss': stop_loss_price,
+            'support_level': support_level,
+            'resistance_level': resistance_level,
+            'risk_reward_ratio': risk_reward,
+            'best_time': best_time
         }
 
     def get_all_signals(self):

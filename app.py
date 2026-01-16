@@ -2918,6 +2918,68 @@ with tab1:
 
                                 st.caption(f"RSI: {rsi:.0f} ({rsi_color})")
 
+                                # === ENTRY/EXIT POINTS ===
+                                if signal.get('entry_price') is not None:
+                                    st.markdown("---")
+                                    st.markdown("**📍 Entry & Exit Points:**")
+
+                                    # Entry and Support row
+                                    col_entry, col_support = st.columns(2)
+                                    with col_entry:
+                                        st.metric("🎯 Entry Price", f"Rp {signal['entry_price']:,.0f}")
+                                        entry_timing = signal.get('entry_timing', 'N/A')
+                                        timing_emoji = "✅" if "now" in entry_timing.lower() else "⏳"
+                                        st.caption(f"{timing_emoji} {entry_timing}")
+
+                                    with col_support:
+                                        support = signal.get('support_level', metrics['day_low'])
+                                        st.metric("🛡️ Support", f"Rp {support:,.0f}")
+                                        dist_to_support = ((metrics['current_price'] - support) / support * 100) if support > 0 else 0
+                                        st.caption(f"↓ {dist_to_support:.1f}% from current")
+
+                                    # Target and Stop Loss row
+                                    if signal.get('target_price') or signal.get('stop_loss'):
+                                        col_target, col_sl = st.columns(2)
+
+                                        with col_target:
+                                            if signal.get('target_price'):
+                                                target = signal['target_price']
+                                                profit_pct = ((target - signal['entry_price']) / signal['entry_price'] * 100) if signal['entry_price'] > 0 else 0
+                                                st.metric("🎯 Target (Take Profit)", f"Rp {target:,.0f}", f"+{profit_pct:.1f}%")
+                                            else:
+                                                resistance = signal.get('resistance_level', metrics['day_high'])
+                                                st.metric("⚔️ Resistance", f"Rp {resistance:,.0f}")
+
+                                        with col_sl:
+                                            if signal.get('stop_loss'):
+                                                sl = signal['stop_loss']
+                                                loss_pct = ((sl - signal['entry_price']) / signal['entry_price'] * 100) if signal['entry_price'] > 0 else 0
+                                                st.metric("🛑 Stop Loss", f"Rp {sl:,.0f}", f"{loss_pct:.1f}%")
+
+                                    # Risk/Reward Ratio
+                                    if signal.get('risk_reward_ratio', 0) > 0:
+                                        rr = signal['risk_reward_ratio']
+                                        if rr >= 2.0:
+                                            rr_color = "🟢"
+                                            rr_text = "Excellent"
+                                        elif rr >= 1.5:
+                                            rr_color = "🟡"
+                                            rr_text = "Good"
+                                        else:
+                                            rr_color = "🔴"
+                                            rr_text = "Poor"
+                                        st.caption(f"{rr_color} Risk/Reward: 1:{rr:.2f} ({rr_text})")
+
+                                    # Best Time to Trade
+                                    if signal.get('best_time'):
+                                        best_time = signal['best_time']
+                                        if "NOW" in best_time:
+                                            st.success(f"⏰ {best_time}")
+                                        elif "Wait" in best_time:
+                                            st.warning(f"⏰ {best_time}")
+                                        else:
+                                            st.info(f"⏰ {best_time}")
+
                                 # Reasons expander
                                 with st.expander("📝 See Analysis Details"):
                                     for reason in signal['reasons']:

@@ -53,6 +53,9 @@ Untuk setiap saham:
 - **Signal**: STRONG_BUY / BUY / HOLD / SELL / STRONG_SELL
 - **Signal Strength**: 0-100 score
 - **RSI**: Oversold/Overbought/Neutral
+- **Entry/Exit Points**: 🎯 Entry price, target, stop loss, support/resistance
+- **Risk/Reward Ratio**: Calculated R:R for each trade
+- **Best Time**: Timing recommendations (Buy now / Wait for pullback)
 - **Analysis Details**: Alasan lengkap sinyal trading
 
 ### 6. **Portfolio Simulation** 💼
@@ -105,6 +108,128 @@ Simulasi portfolio dengan capital allocation:
 #### 6. 5-Day Momentum (15 points)
 - **+15**: 5-day gain > 3%
 - **-15**: 5-day loss > 3%
+
+---
+
+## 🎯 Entry/Exit Points System
+
+The system automatically calculates precise entry and exit points for each trading signal to help you maximize profits and minimize losses.
+
+### Entry Price Calculation
+
+**For BUY/STRONG_BUY Signals:**
+- **If price near day's high** (>70% of range):
+  - Entry: 0.5% below current price
+  - Timing: "Wait for small pullback"
+  - Rationale: Better entry point to avoid buying at peak
+
+- **If price in good range** (≤70% of range):
+  - Entry: Current market price
+  - Timing: "Buy now / market price"
+  - Rationale: Good opportunity to enter immediately
+
+### Target Price (Take Profit)
+
+**STRONG_BUY Signals:**
+- Base target: **3-5% profit**
+- Calculation: 3% + (signal_score/100 × 2%)
+- Example: Signal score 80 → Target = 3% + 1.6% = 4.6%
+
+**BUY Signals:**
+- Base target: **2-3.5% profit**
+- Calculation: 2% + (signal_score/100 × 1.5%)
+- Example: Signal score 60 → Target = 2% + 0.9% = 2.9%
+
+### Stop Loss Calculation
+
+**Dynamic Stop Loss:**
+- Base: **1.5-2% below entry**
+- Volatility adjustment: +0.5 × (day_range/price)
+- Formula: `stop_loss = entry × (1 - stop_loss_pct)`
+
+**Example:**
+```
+Entry: Rp 10,000
+Day Range: Rp 200 (2%)
+Base SL: 1.5%
+Volatility Add: 0.5 × 2% = 1%
+Total SL: 2.5%
+Stop Loss Price: Rp 10,000 × (1 - 0.025) = Rp 9,750
+```
+
+### Support & Resistance Levels
+
+**Support Level:**
+- Day's low price
+- Acts as price floor
+- Good buy zone if price approaches
+
+**Resistance Level:**
+- Day's high price
+- Acts as price ceiling
+- Potential sell zone if broken
+
+### Risk/Reward Ratio
+
+**Calculation:**
+```
+R:R = Potential Profit / Potential Loss
+R:R = (Target - Entry) / (Entry - Stop Loss)
+```
+
+**Rating:**
+- 🟢 **Excellent**: R:R ≥ 2.0 (Risk $1 to make $2+)
+- 🟡 **Good**: R:R 1.5 - 1.99 (Risk $1 to make $1.50-$1.99)
+- 🔴 **Poor**: R:R < 1.5 (Risk $1 to make less than $1.50)
+
+**Recommendation:**
+- Only take trades with R:R ≥ 1.5
+- Ideal trades: R:R ≥ 2.0
+- Avoid trades with R:R < 1.5
+
+### Best Time to Trade
+
+**Timing Signals:**
+- **"NOW - Price near support"**:
+  - Price in bottom 30% of day's range
+  - Good entry opportunity
+  - Action: Buy immediately
+
+- **"Good entry range"**:
+  - Price in middle 40% of range
+  - Acceptable entry
+  - Action: Buy at market
+
+- **"Wait for pullback to support"**:
+  - Price in top 30% of range
+  - Wait for better price
+  - Action: Set limit order below current
+
+### Example Trade Setup
+
+```
+Stock: BBCA
+Signal: STRONG_BUY (Score: 75/100)
+Current Price: Rp 10,200
+
+📍 Entry & Exit Points:
+🎯 Entry Price: Rp 10,150 (0.5% below)
+   ✅ Buy now / market price
+
+🛡️ Support: Rp 10,000
+   ↓ 2.0% from current
+
+🎯 Target (Take Profit): Rp 10,560 (+4.0%)
+   Expected profit: Rp 410 per share
+
+🛑 Stop Loss: Rp 9,900 (-2.5%)
+   Max loss: Rp 250 per share
+
+🟢 Risk/Reward: 1:1.64 (Good)
+   Risk Rp 250 to make Rp 410
+
+⏰ NOW - Price near support
+```
 
 ---
 
