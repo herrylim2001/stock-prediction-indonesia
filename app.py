@@ -55,6 +55,14 @@ except ImportError:
     PATTERN_DETECTORS_AVAILABLE = False
     print("⚠️ Pattern detector modules not available - running without advanced pattern detection")
 
+# Import multibagger tracker for daily trading watchlist
+try:
+    from utils.multibagger_tracker import get_multibagger_analysis, MultibaggerTracker
+    MULTIBAGGER_AVAILABLE = True
+except ImportError:
+    MULTIBAGGER_AVAILABLE = False
+    print("⚠️ Multibagger tracker not available - running without daily trading features")
+
 # Page config
 st.set_page_config(
     page_title="Indonesian Stock Prediction",
@@ -2728,7 +2736,8 @@ else:
 st.markdown("---")
 
 # Tabs
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
+    "💰 Multibagger Daily Trading",
     "📊 Chart & Indicators",
     "🎯 Predictions",
     "💡 Trading Recommendation",
@@ -2740,6 +2749,242 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
 ])
 
 with tab1:
+    # Multibagger Daily Trading
+    st.subheader("💰 Multibagger Daily Trading Dashboard")
+    st.markdown("**Saham favorit untuk trading rutin setiap hari**")
+
+    if MULTIBAGGER_AVAILABLE:
+        # Define multibagger watchlist (customizable)
+        multibagger_codes = st.multiselect(
+            "📋 Pilih Saham Multibagger (untuk trading rutin)",
+            options=list(STOCKS.keys()),
+            default=['BBCA', 'BBRI', 'TLKM', 'ASII', 'GOTO'],
+            help="Pilih 3-8 saham yang mau kamu mainkan rutin setiap hari"
+        )
+
+        if len(multibagger_codes) < 2:
+            st.warning("⚠️ Pilih minimal 2 saham untuk comparison")
+        else:
+            # Capital allocation
+            capital = st.number_input(
+                "💵 Modal Trading (Rp)",
+                min_value=10000000,
+                max_value=10000000000,
+                value=100000000,
+                step=10000000,
+                help="Total modal yang mau dialokasikan ke multibagger stocks"
+            )
+
+            st.markdown("---")
+
+            # Get multibagger analysis
+            with st.spinner("Analyzing multibagger stocks..."):
+                try:
+                    analysis = get_multibagger_analysis(multibagger_codes, STOCKS, capital=capital)
+
+                    # === TOP SECTION: QUICK OVERVIEW ===
+                    st.markdown("### 📊 Quick Overview")
+
+                    # Metrics row
+                    col1, col2, col3, col4 = st.columns(4)
+
+                    with col1:
+                        total_pl = analysis['portfolio']['total_daily_pl']
+                        pl_pct = analysis['portfolio']['total_daily_pl_pct']
+                        st.metric(
+                            "Total Daily P/L",
+                            f"Rp {total_pl:,.0f}",
+                            f"{pl_pct:+.2f}%",
+                            delta_color="normal"
+                        )
+
+                    with col2:
+                        buy_signals = sum(1 for sig in analysis['signals'].values()
+                                        if sig['signal'] in ['BUY', 'STRONG_BUY'])
+                        st.metric("Buy Signals", buy_signals)
+
+                    with col3:
+                        sell_signals = sum(1 for sig in analysis['signals'].values()
+                                         if sig['signal'] in ['SELL', 'STRONG_SELL'])
+                        st.metric("Sell Signals", sell_signals)
+
+                    with col4:
+                        hold_signals = sum(1 for sig in analysis['signals'].values()
+                                         if sig['signal'] == 'HOLD')
+                        st.metric("Hold Signals", hold_signals)
+
+                    st.markdown("---")
+
+                    # === TOP OPPORTUNITIES ===
+                    st.markdown("### 🎯 Top Trading Opportunities Today")
+
+                    if analysis['opportunities']:
+                        opp_cols = st.columns(min(len(analysis['opportunities']), 3))
+
+                        for i, (code, signal) in enumerate(analysis['opportunities']):
+                            with opp_cols[i]:
+                                metrics = signal['metrics']
+                                st.markdown(f"#### {code} - {metrics['name']}")
+
+                                # Signal badge
+                                signal_emoji = "🟢" if signal['signal'] == 'STRONG_BUY' else "🟡"
+                                st.success(f"{signal_emoji} **{signal['signal']}** (Strength: {signal['strength']}/100)")
+
+                                # Key metrics
+                                st.metric("Current Price", f"Rp {metrics['current_price']:,.0f}")
+                                st.metric("Daily Change", f"{metrics['daily_change_pct']:+.2f}%")
+                                st.metric("5D Momentum", f"{metrics['momentum_5d']:+.2f}%")
+
+                                # Top reasons
+                                st.markdown("**Key Reasons:**")
+                                for reason in signal['reasons'][:3]:
+                                    st.caption(f"• {reason}")
+                    else:
+                        st.info("ℹ️ No strong buy signals at the moment. Consider HOLD.")
+
+                    st.markdown("---")
+
+                    # === COMPARISON TABLE ===
+                    st.markdown("### 📋 Full Comparison")
+
+                    if not analysis['comparison'].empty:
+                        # Format the dataframe for display
+                        df_display = analysis['comparison'].copy()
+
+                        # Color code signals
+                        def color_signal(val):
+                            if val in ['STRONG_BUY', 'BUY']:
+                                return 'background-color: #d4edda; color: #155724'
+                            elif val in ['STRONG_SELL', 'SELL']:
+                                return 'background-color: #f8d7da; color: #721c24'
+                            else:
+                                return 'background-color: #fff3cd; color: #856404'
+
+                        # Apply formatting
+                        styled_df = df_display.style.format({
+                            'Price': 'Rp {:,.0f}',
+                            'Change': 'Rp {:,.0f}',
+                            'Change %': '{:+.2f}%',
+                            '5D Momentum %': '{:+.2f}%',
+                            'Volume Ratio': '{:.2f}x',
+                            'RSI': '{:.0f}'
+                        }).applymap(color_signal, subset=['Signal'])
+
+                        st.dataframe(styled_df, use_container_width=True, height=400)
+
+                    st.markdown("---")
+
+                    # === DETAILED SIGNALS ===
+                    st.markdown("### 📈 Detailed Trading Signals")
+
+                    # Create columns for signals
+                    signal_cols = st.columns(min(len(multibagger_codes), 3))
+
+                    for i, code in enumerate(multibagger_codes):
+                        col_idx = i % 3
+                        with signal_cols[col_idx]:
+                            signal = analysis['signals'].get(code)
+
+                            if signal and signal['signal'] != 'NO_DATA':
+                                metrics = signal['metrics']
+
+                                # Card header
+                                st.markdown(f"#### {code} - {STOCKS[code]['name']}")
+
+                                # Signal indicator
+                                if signal['signal'] in ['STRONG_BUY', 'BUY']:
+                                    st.success(f"🟢 **{signal['signal']}**")
+                                elif signal['signal'] in ['STRONG_SELL', 'SELL']:
+                                    st.error(f"🔴 **{signal['signal']}**")
+                                else:
+                                    st.warning(f"🟡 **{signal['signal']}**")
+
+                                # Metrics
+                                st.metric("Price", f"Rp {metrics['current_price']:,.0f}",
+                                        f"{metrics['daily_change_pct']:+.2f}%")
+
+                                # Progress bar for signal strength
+                                st.progress(signal['strength'] / 100)
+                                st.caption(f"Signal Strength: {signal['strength']}/100")
+
+                                # RSI indicator
+                                rsi = signal['rsi']
+                                if rsi < 30:
+                                    rsi_color = "🟢 Oversold"
+                                elif rsi > 70:
+                                    rsi_color = "🔴 Overbought"
+                                else:
+                                    rsi_color = "🟡 Neutral"
+
+                                st.caption(f"RSI: {rsi:.0f} ({rsi_color})")
+
+                                # Reasons expander
+                                with st.expander("📝 See Analysis Details"):
+                                    for reason in signal['reasons']:
+                                        st.write(f"• {reason}")
+
+                            st.markdown("---")
+
+                    # === PORTFOLIO SIMULATION ===
+                    st.markdown("### 💼 Portfolio Simulation")
+
+                    port = analysis['portfolio']
+
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Total Capital", f"Rp {port['capital']:,.0f}")
+                    with col2:
+                        st.metric("Invested", f"Rp {port['invested']:,.0f}")
+                    with col3:
+                        st.metric("Cash Reserve", f"Rp {port['cash']:,.0f}")
+
+                    # Portfolio positions
+                    st.markdown("#### 📊 Position Details")
+
+                    port_df = pd.DataFrame(port['positions'])
+                    if not port_df.empty:
+                        port_display = port_df[['code', 'name', 'shares', 'price', 'position_value', 'daily_pl', 'daily_pl_pct']].copy()
+                        port_display.columns = ['Code', 'Name', 'Shares', 'Price', 'Position Value', 'Daily P/L', 'Daily P/L %']
+
+                        styled_port = port_display.style.format({
+                            'Shares': '{:,.0f}',
+                            'Price': 'Rp {:,.0f}',
+                            'Position Value': 'Rp {:,.0f}',
+                            'Daily P/L': 'Rp {:,.0f}',
+                            'Daily P/L %': '{:+.2f}%'
+                        })
+
+                        st.dataframe(styled_port, use_container_width=True)
+
+                    # Total P/L summary
+                    st.markdown("---")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        total_pl = port['total_daily_pl']
+                        pl_emoji = "📈" if total_pl > 0 else "📉" if total_pl < 0 else "➡️"
+                        st.metric(
+                            f"{pl_emoji} Total Daily P/L",
+                            f"Rp {total_pl:,.0f}",
+                            f"{port['total_daily_pl_pct']:+.2f}%"
+                        )
+
+                    with col2:
+                        if total_pl > 0:
+                            st.success("✅ Portfolio sedang profit hari ini!")
+                        elif total_pl < 0:
+                            st.error("⚠️ Portfolio sedang loss hari ini")
+                        else:
+                            st.info("➡️ Portfolio flat hari ini")
+
+                except Exception as e:
+                    st.error(f"Error analyzing multibagger stocks: {e}")
+                    import traceback
+                    st.code(traceback.format_exc())
+
+    else:
+        st.error("❌ Multibagger tracker module not available. Please check installation.")
+
+with tab2:
     # Price chart with indicators
     st.subheader("📊 Price & Moving Averages")
 
@@ -2883,7 +3128,7 @@ with tab1:
 
     st.plotly_chart(fig_rsi, use_container_width=True)
 
-with tab2:
+with tab3:
     st.subheader("🔮 Price Predictions")
 
     # Model Performance Metrics Section
@@ -3227,7 +3472,7 @@ with tab2:
 
     st.plotly_chart(fig_pred, use_container_width=True)
 
-with tab3:
+with tab4:
     st.subheader("💡 Trading Recommendation")
 
     # Trading Disclaimer
@@ -3324,7 +3569,7 @@ with tab3:
         - Monitor price action and key support/resistance levels
         """)
 
-with tab4:
+with tab5:
     st.subheader("🔍 Analisa Pergerakan Saham - Kenapa Naik/Turun?")
 
     # Overall Analysis Summary
@@ -3633,7 +3878,7 @@ with tab4:
         except Exception as e:
             st.warning(f"⚠️ Pattern detection error: {e}")
 
-with tab5:
+with tab6:
     st.subheader("📰 News & Sentiment Analysis")
 
     # Model status indicator
@@ -3767,7 +4012,7 @@ with tab5:
         """)
 
 # TAB 6: Daily Data
-with tab6:
+with tab7:
     st.subheader("📅 Daily Price Data")
 
     st.markdown("""
@@ -3833,7 +4078,7 @@ with tab6:
     )
 
 # TAB 7: Transaction History
-with tab7:
+with tab8:
     st.subheader("📊 Transaction History Simulator")
 
     st.markdown("""
@@ -3970,7 +4215,7 @@ with tab7:
     """)
 
 # TAB 8: Help & Documentation
-with tab8:
+with tab9:
     st.subheader("📚 Help & Documentation")
 
     st.markdown("""
