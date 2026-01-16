@@ -45,6 +45,16 @@ except ImportError:
     HOLIDAYS_AVAILABLE = False
     print("⚠️ IDX holidays module not available - running without holiday detection")
 
+# Import advanced pattern detectors for deep technical analysis
+try:
+    from utils.chart_pattern_detector import get_chart_patterns
+    from utils.candlestick_pattern_detector import get_candlestick_patterns
+    from utils.volume_profile_analyzer import get_volume_profile
+    PATTERN_DETECTORS_AVAILABLE = True
+except ImportError:
+    PATTERN_DETECTORS_AVAILABLE = False
+    print("⚠️ Pattern detector modules not available - running without advanced pattern detection")
+
 # Page config
 st.set_page_config(
     page_title="Indonesian Stock Prediction",
@@ -1292,6 +1302,151 @@ def generate_technical_predictions(df, current_price, volatility=0.02, sentiment
         except Exception as e:
             # If database query fails, continue without historical trends
             print(f"⚠️ Could not load historical sentiment trends: {e}")
+            pass
+
+    # === INDICATOR 16: CHART PATTERN DETECTION ===
+    # Detects classical chart patterns: Head & Shoulders, Double Top/Bottom, Triangles, etc.
+    chart_pattern_momentum = 0
+
+    if PATTERN_DETECTORS_AVAILABLE and df is not None and len(df) >= 30:
+        try:
+            # Detect all chart patterns
+            chart_patterns = get_chart_patterns(df)
+
+            if 'summary' in chart_patterns:
+                summary = chart_patterns['summary']
+
+                # Apply aggregate signal
+                if summary['aggregate_signal'] == 'BULLISH':
+                    chart_pattern_momentum = summary['signal_strength']
+                    confidence_factors.append(0.80)
+                elif summary['aggregate_signal'] == 'BEARISH':
+                    chart_pattern_momentum = -summary['signal_strength']
+                    confidence_factors.append(0.80)
+
+                # Extra boost for high-reliability patterns
+                for pattern_name, pattern_data in chart_patterns.items():
+                    if pattern_name == 'summary':
+                        continue
+
+                    if pattern_data.get('detected', False):
+                        strength = pattern_data.get('strength', 50)
+
+                        # Triple Top/Bottom (very strong reversal signals)
+                        if pattern_name in ['triple_top', 'triple_bottom'] and strength >= 90:
+                            confidence_factors.append(0.92)
+
+                        # Head and Shoulders (reliable reversal)
+                        if pattern_name in ['head_and_shoulders', 'inverse_head_and_shoulders'] and strength >= 85:
+                            confidence_factors.append(0.88)
+
+                        # Cup and Handle (strong continuation)
+                        if pattern_name == 'cup_and_handle' and strength >= 80:
+                            confidence_factors.append(0.85)
+
+                # Add to momentum
+                momentum_score += chart_pattern_momentum
+
+        except Exception as e:
+            print(f"⚠️ Chart pattern detection error: {e}")
+            pass
+
+    # === INDICATOR 17: CANDLESTICK PATTERN DETECTION ===
+    # Detects 50+ candlestick patterns: Doji, Hammer, Engulfing, Morning Star, etc.
+    candlestick_momentum = 0
+
+    if PATTERN_DETECTORS_AVAILABLE and df is not None and len(df) >= 5:
+        try:
+            # Detect all candlestick patterns
+            candle_patterns = get_candlestick_patterns(df)
+
+            if 'summary' in candle_patterns:
+                summary = candle_patterns['summary']
+
+                # Apply aggregate signal
+                if summary['aggregate_signal'] == 'BULLISH':
+                    candlestick_momentum = summary['signal_strength']
+                    confidence_factors.append(0.75)
+                elif summary['aggregate_signal'] == 'BEARISH':
+                    candlestick_momentum = -summary['signal_strength']
+                    confidence_factors.append(0.75)
+
+                # Extra confidence for high-reliability patterns
+                for pattern_name, pattern_data in candle_patterns.items():
+                    if pattern_name == 'summary':
+                        continue
+
+                    if pattern_data.get('detected', False):
+                        strength = pattern_data.get('strength', 50)
+
+                        # 3-candle reversal patterns (very strong)
+                        if pattern_name in ['morning_star', 'evening_star'] and strength >= 90:
+                            confidence_factors.append(0.93)
+
+                        # Engulfing patterns (strong reversal)
+                        if pattern_name in ['bullish_engulfing', 'bearish_engulfing'] and strength >= 85:
+                            confidence_factors.append(0.87)
+
+                        # Three White Soldiers / Three Black Crows (strong continuation)
+                        if pattern_name in ['three_white_soldiers', 'three_black_crows'] and strength >= 85:
+                            confidence_factors.append(0.88)
+
+                        # Abandoned Baby (rare, very strong)
+                        if pattern_name in ['abandoned_baby_bull', 'abandoned_baby_bear'] and strength >= 95:
+                            confidence_factors.append(0.96)
+
+                # Add to momentum
+                momentum_score += candlestick_momentum
+
+        except Exception as e:
+            print(f"⚠️ Candlestick pattern detection error: {e}")
+            pass
+
+    # === INDICATOR 18: VOLUME PROFILE ANALYSIS ===
+    # Analyzes volume distribution: POC, Value Area, VWAP, High/Low Volume Nodes
+    volume_profile_momentum = 0
+
+    if PATTERN_DETECTORS_AVAILABLE and df is not None and len(df) >= 20:
+        try:
+            # Get volume profile analysis
+            volume_analysis = get_volume_profile(df, bins=20)
+
+            if 'momentum' in volume_analysis:
+                # Base momentum from volume profile
+                volume_profile_momentum = volume_analysis['momentum']
+
+                # Add confidence
+                vol_confidence = volume_analysis.get('confidence', 0.5)
+                confidence_factors.append(vol_confidence)
+
+                # Extra analysis for specific conditions
+                if 'analysis' in volume_analysis:
+                    analysis = volume_analysis['analysis']
+
+                    # Strong signals from value area position
+                    va_signal = analysis['value_area']['signal']
+                    if va_signal in ['BULLISH', 'BEARISH']:
+                        confidence_factors.append(0.82)
+
+                    # VWAP extreme positions
+                    vwap_distance = analysis['vwap']['distance_pct']
+                    if abs(vwap_distance) > 3:  # >3% from VWAP
+                        confidence_factors.append(0.78)
+
+                    # Increasing volume with trend (strong confirmation)
+                    vol_trend = analysis['volume_trend']
+                    if vol_trend['trend'] == 'INCREASING':
+                        if (volume_analysis['signal'] == 'BULLISH' and vol_trend['signal'] == 'BULLISH') or \
+                           (volume_analysis['signal'] == 'BEARISH' and vol_trend['signal'] == 'BEARISH'):
+                            # Volume confirms price direction
+                            volume_profile_momentum *= 1.3  # 30% boost
+                            confidence_factors.append(0.90)
+
+                # Add to momentum
+                momentum_score += volume_profile_momentum
+
+        except Exception as e:
+            print(f"⚠️ Volume profile analysis error: {e}")
             pass
 
     # === DAY OF WEEK PATTERN (IDX specific) ===
@@ -3326,6 +3481,157 @@ with tab4:
     with col3:
         volatility = df['close'].pct_change().std() * np.sqrt(252) * 100
         st.metric("Annualized Volatility", f"{volatility:.2f}%")
+
+    # === ADVANCED PATTERN DETECTION ===
+    if PATTERN_DETECTORS_AVAILABLE and df is not None and len(df) >= 30:
+        st.markdown("---")
+        st.markdown("### 🔍 Advanced Pattern Detection")
+
+        # Detect all patterns
+        try:
+            chart_patterns = get_chart_patterns(df)
+            candle_patterns = get_candlestick_patterns(df)
+            volume_analysis = get_volume_profile(df, bins=20)
+
+            # Create tabs for different pattern types
+            pattern_tab1, pattern_tab2, pattern_tab3 = st.tabs([
+                "📊 Chart Patterns",
+                "🕯️ Candlestick Patterns",
+                "📈 Volume Profile"
+            ])
+
+            with pattern_tab1:
+                st.markdown("#### Classical Chart Patterns")
+
+                if 'summary' in chart_patterns and chart_patterns['summary']['bullish_patterns'] + chart_patterns['summary']['bearish_patterns'] > 0:
+                    summary = chart_patterns['summary']
+
+                    # Summary metrics
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        signal_icon = "🟢" if summary['aggregate_signal'] == 'BULLISH' else "🔴" if summary['aggregate_signal'] == 'BEARISH' else "🟡"
+                        st.metric("Aggregate Signal", f"{signal_icon} {summary['aggregate_signal']}")
+
+                    with col2:
+                        st.metric("Bullish Patterns", summary['bullish_patterns'])
+
+                    with col3:
+                        st.metric("Bearish Patterns", summary['bearish_patterns'])
+
+                    # List detected patterns
+                    st.markdown("**Detected Patterns:**")
+                    for pattern_name in summary['detected_patterns']:
+                        if pattern_name in chart_patterns:
+                            pattern = chart_patterns[pattern_name]
+                            if pattern.get('detected', False):
+                                signal_icon = "🟢" if pattern['signal'] == 'BULLISH' else "🔴" if pattern['signal'] == 'BEARISH' else "🟡"
+                                strength = pattern.get('strength', 0)
+                                pattern_display = pattern.get('pattern', pattern_name.replace('_', ' ').title())
+
+                                st.markdown(f"- {signal_icon} **{pattern_display}** (Strength: {strength}/100)")
+
+                                # Show target if available
+                                if 'target' in pattern and pattern['target']:
+                                    st.caption(f"  → Target: Rp {pattern['target']:,.0f}")
+
+                else:
+                    st.info("ℹ️ No significant chart patterns detected in recent price action")
+
+            with pattern_tab2:
+                st.markdown("#### Candlestick Patterns")
+
+                if 'summary' in candle_patterns and candle_patterns['summary']['bullish_patterns'] + candle_patterns['summary']['bearish_patterns'] > 0:
+                    summary = candle_patterns['summary']
+
+                    # Summary metrics
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        signal_icon = "🟢" if summary['aggregate_signal'] == 'BULLISH' else "🔴" if summary['aggregate_signal'] == 'BEARISH' else "🟡"
+                        st.metric("Aggregate Signal", f"{signal_icon} {summary['aggregate_signal']}")
+
+                    with col2:
+                        st.metric("Bullish Patterns", summary['bullish_patterns'])
+
+                    with col3:
+                        st.metric("Bearish Patterns", summary['bearish_patterns'])
+
+                    # List detected patterns
+                    st.markdown("**Detected Patterns:**")
+                    for pattern_name in summary['detected_patterns']:
+                        if pattern_name in candle_patterns:
+                            pattern = candle_patterns[pattern_name]
+                            if pattern.get('detected', False):
+                                signal_icon = "🟢" if pattern['signal'] == 'BULLISH' else "🔴" if pattern['signal'] == 'BEARISH' else "🟡"
+                                strength = pattern.get('strength', 0)
+                                pattern_display = pattern.get('pattern', pattern_name.replace('_', ' ').title())
+
+                                st.markdown(f"- {signal_icon} **{pattern_display}** (Strength: {strength}/100)")
+
+                else:
+                    st.info("ℹ️ No significant candlestick patterns detected in recent candles")
+
+            with pattern_tab3:
+                st.markdown("#### Volume Profile Analysis")
+
+                if 'analysis' in volume_analysis:
+                    analysis = volume_analysis['analysis']
+
+                    # Summary metrics
+                    col1, col2, col3, col4 = st.columns(4)
+
+                    with col1:
+                        signal_icon = "🟢" if volume_analysis['signal'] == 'BULLISH' else "🔴" if volume_analysis['signal'] == 'BEARISH' else "🟡"
+                        st.metric("Signal", f"{signal_icon} {volume_analysis['signal']}")
+
+                    with col2:
+                        st.metric("Momentum", f"{volume_analysis['momentum']:+.0f}")
+
+                    with col3:
+                        conf_pct = volume_analysis['confidence'] * 100
+                        st.metric("Confidence", f"{conf_pct:.0f}%")
+
+                    with col4:
+                        vol_trend = analysis['volume_trend']['trend']
+                        trend_icon = "📈" if vol_trend == 'INCREASING' else "📉" if vol_trend == 'DECREASING' else "➡️"
+                        st.metric("Volume Trend", f"{trend_icon} {vol_trend}")
+
+                    # Key levels
+                    st.markdown("**Key Price Levels:**")
+
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+                        poc = analysis['poc']
+                        poc_role_icon = "🟢" if poc['role'] == 'SUPPORT' else "🔴" if poc['role'] == 'RESISTANCE' else "⚪"
+                        st.markdown(f"- **POC ({poc['role']}):** {poc_role_icon} Rp {poc['price']:,.0f}")
+                        st.caption(f"  Distance: {poc['distance_pct']:+.2f}%")
+
+                        vwap = analysis['vwap']
+                        vwap_icon = "🟡"
+                        st.markdown(f"- **VWAP:** {vwap_icon} Rp {vwap['vwap']:,.0f}")
+                        st.caption(f"  Distance: {vwap['distance_pct']:+.2f}% ({vwap['signal']})")
+
+                    with col2:
+                        va = analysis['value_area']
+                        st.markdown(f"- **Value Area:**")
+                        st.caption(f"  High: Rp {va['high']:,.0f}")
+                        st.caption(f"  Low: Rp {va['low']:,.0f}")
+                        st.caption(f"  Position: {va['position']}")
+
+                        # Support/Resistance from HVN
+                        if analysis.get('hvn_support'):
+                            hvn_sup = analysis['hvn_support']
+                            st.markdown(f"- **Support (HVN):** 🟢 Rp {hvn_sup['price']:,.0f}")
+
+                        if analysis.get('hvn_resistance'):
+                            hvn_res = analysis['hvn_resistance']
+                            st.markdown(f"- **Resistance (HVN):** 🔴 Rp {hvn_res['price']:,.0f}")
+
+                else:
+                    st.info("ℹ️ Volume profile analysis not available")
+
+        except Exception as e:
+            st.warning(f"⚠️ Pattern detection error: {e}")
 
 with tab5:
     st.subheader("📰 News & Sentiment Analysis")

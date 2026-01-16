@@ -21,6 +21,7 @@ keras>=3.0.0
 # Technical Analysis
 ta>=0.11.0
 pandas-ta>=0.3.14b
+scipy>=1.11.0
 
 # Visualization
 matplotlib>=3.7.0
