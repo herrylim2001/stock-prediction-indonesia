@@ -2926,14 +2926,16 @@ with tab1:
                                     # Entry and Support row
                                     col_entry, col_support = st.columns(2)
                                     with col_entry:
-                                        st.metric("🎯 Entry Price", f"Rp {signal['entry_price']:,.0f}")
+                                        entry_formatted = f"{signal['entry_price']:,.0f}".replace(',', '.')
+                                        st.metric("🎯 Entry Price", f"Rp {entry_formatted}")
                                         entry_timing = signal.get('entry_timing', 'N/A')
                                         timing_emoji = "✅" if "now" in entry_timing.lower() else "⏳"
                                         st.caption(f"{timing_emoji} {entry_timing}")
 
                                     with col_support:
                                         support = signal.get('support_level', metrics['day_low'])
-                                        st.metric("🛡️ Support", f"Rp {support:,.0f}")
+                                        support_formatted = f"{support:,.0f}".replace(',', '.')
+                                        st.metric("🛡️ Support", f"Rp {support_formatted}")
                                         dist_to_support = ((metrics['current_price'] - support) / support * 100) if support > 0 else 0
                                         st.caption(f"↓ {dist_to_support:.1f}% from current")
 
@@ -2944,17 +2946,20 @@ with tab1:
                                         with col_target:
                                             if signal.get('target_price'):
                                                 target = signal['target_price']
+                                                target_formatted = f"{target:,.0f}".replace(',', '.')
                                                 profit_pct = ((target - signal['entry_price']) / signal['entry_price'] * 100) if signal['entry_price'] > 0 else 0
-                                                st.metric("🎯 Target (Take Profit)", f"Rp {target:,.0f}", f"+{profit_pct:.1f}%")
+                                                st.metric("🎯 Target (Take Profit)", f"Rp {target_formatted}", f"+{profit_pct:.1f}%")
                                             else:
                                                 resistance = signal.get('resistance_level', metrics['day_high'])
-                                                st.metric("⚔️ Resistance", f"Rp {resistance:,.0f}")
+                                                resistance_formatted = f"{resistance:,.0f}".replace(',', '.')
+                                                st.metric("⚔️ Resistance", f"Rp {resistance_formatted}")
 
                                         with col_sl:
                                             if signal.get('stop_loss'):
                                                 sl = signal['stop_loss']
+                                                sl_formatted = f"{sl:,.0f}".replace(',', '.')
                                                 loss_pct = ((sl - signal['entry_price']) / signal['entry_price'] * 100) if signal['entry_price'] > 0 else 0
-                                                st.metric("🛑 Stop Loss", f"Rp {sl:,.0f}", f"{loss_pct:.1f}%")
+                                                st.metric("🛑 Stop Loss", f"Rp {sl_formatted}", f"{loss_pct:.1f}%")
 
                                     # Risk/Reward Ratio
                                     if signal.get('risk_reward_ratio', 0) > 0:
