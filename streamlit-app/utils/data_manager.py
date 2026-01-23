@@ -11,10 +11,11 @@ class DataManager:
     """Singleton class untuk manage data"""
 
     def __init__(self):
-        self._init_session_state()
+        # Don't initialize here - will be done lazily when needed
+        pass
 
-    def _init_session_state(self):
-        """Initialize session state dengan sample data"""
+    def _ensure_initialized(self):
+        """Ensure session state is initialized (lazy initialization)"""
         if 'talents' not in st.session_state:
             st.session_state.talents = self._create_sample_talents()
 
@@ -188,6 +189,7 @@ class DataManager:
     # Talent Operations
     def get_all_talents(self):
         """Get all talents"""
+        self._ensure_initialized()
         return st.session_state.talents
 
     def get_talent_by_id(self, talent_id):
@@ -196,6 +198,7 @@ class DataManager:
 
     def update_talent(self, talent_id, updates):
         """Update talent data"""
+        self._ensure_initialized()
         for i, talent in enumerate(st.session_state.talents):
             if talent['id'] == talent_id:
                 st.session_state.talents[i].update(updates)
@@ -212,18 +215,21 @@ class DataManager:
 
     def add_talent(self, talent_data):
         """Add new talent"""
+        self._ensure_initialized()
         talent_data['id'] = str(uuid.uuid4())
         st.session_state.talents.append(talent_data)
         return talent_data
 
     def delete_talent(self, talent_id):
         """Delete talent"""
+        self._ensure_initialized()
         st.session_state.talents = [t for t in st.session_state.talents if t['id'] != talent_id]
         return True
 
     # Livestream Operations
     def get_all_livestreams(self):
         """Get all active livestreams"""
+        self._ensure_initialized()
         return [ls for ls in st.session_state.livestreams if ls['status'] == 'live']
 
     def get_livestream_by_id(self, livestream_id):
@@ -232,6 +238,7 @@ class DataManager:
 
     def create_livestream(self, talent_id, title, description=""):
         """Create new livestream"""
+        self._ensure_initialized()
         talent = self.get_talent_by_id(talent_id)
         if not talent:
             return None
@@ -262,6 +269,7 @@ class DataManager:
 
     def end_livestream(self, livestream_id):
         """End livestream"""
+        self._ensure_initialized()
         for i, ls in enumerate(st.session_state.livestreams):
             if ls['id'] == livestream_id:
                 st.session_state.livestreams[i]['status'] = 'ended'
@@ -274,6 +282,7 @@ class DataManager:
 
     def update_livestream_stats(self, livestream_id, stat_type, increment=1):
         """Update livestream statistics"""
+        self._ensure_initialized()
         for i, ls in enumerate(st.session_state.livestreams):
             if ls['id'] == livestream_id:
                 st.session_state.livestreams[i][stat_type] += increment
