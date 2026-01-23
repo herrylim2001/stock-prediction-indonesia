@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backoffice - Livestream Management</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-video"></i>
+            <h2>LiveStream Admin</h2>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-page="dashboard">
+                <i class="fas fa-chart-line"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="#" class="nav-item" data-page="talents">
+                <i class="fas fa-users"></i>
+                <span>Talent Management</span>
+            </a>
+            <a href="#" class="nav-item" data-page="livestreams">
+                <i class="fas fa-broadcast-tower"></i>
+                <span>Active Livestreams</span>
+            </a>
+            <a href="#" class="nav-item" data-page="analytics">
+                <i class="fas fa-chart-bar"></i>
+                <span>Analytics</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1 id="page-title">Dashboard</h1>
+                <span class="badge badge-success">
+                    <i class="fas fa-circle"></i> System Online
+                </span>
+            </div>
+            <div class="header-right">
+                <div class="notification-icon">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge">3</span>
+                </div>
+                <div class="user-info">
+                    <img src="https://i.pravatar.cc/40?img=60" alt="Admin">
+                    <span>Admin</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Page -->
+        <div id="dashboard-page" class="page active">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="total-talents">0</h3>
+                        <p>Total Talents</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">
+                        <i class="fas fa-broadcast-tower"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="active-livestreams">0</h3>
+                        <p>Active Livestreams</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple">
+                        <i class="fas fa-eye"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="total-viewers">0</h3>
+                        <p>Total Viewers</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange">
+                        <i class="fas fa-gem"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="total-diamonds">0</h3>
+                        <p>Total Diamonds</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="section">
+                <h2>Quick Actions</h2>
+                <div class="quick-actions">
+                    <button class="btn btn-primary" onclick="showPage('talents')">
+                        <i class="fas fa-users"></i> Manage Talents
+                    </button>
+                    <button class="btn btn-success" onclick="showPage('livestreams')">
+                        <i class="fas fa-broadcast-tower"></i> View Livestreams
+                    </button>
+                    <button class="btn btn-info" onclick="refreshData()">
+                        <i class="fas fa-sync"></i> Refresh Data
+                    </button>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="section">
+                <h2>Recent Livestreams</h2>
+                <div id="recent-livestreams" class="livestream-grid"></div>
+            </div>
+        </div>
+
+        <!-- Talents Page -->
+        <div id="talents-page" class="page">
+            <div class="page-header">
+                <h2>Talent Management</h2>
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="talent-search" placeholder="Search talents...">
+                </div>
+            </div>
+
+            <div id="talents-list" class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Talent</th>
+                            <th>Username</th>
+                            <th>Status</th>
+                            <th>Followers</th>
+                            <th>Total Viewers</th>
+                            <th>Diamonds</th>
+                            <th>Level</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="talents-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Livestreams Page -->
+        <div id="livestreams-page" class="page">
+            <div class="page-header">
+                <h2>Active Livestreams</h2>
+                <button class="btn btn-primary" onclick="refreshLivestreams()">
+                    <i class="fas fa-sync"></i> Refresh
+                </button>
+            </div>
+
+            <div id="livestreams-grid" class="livestream-grid"></div>
+        </div>
+
+        <!-- Analytics Page -->
+        <div id="analytics-page" class="page">
+            <div class="page-header">
+                <h2>Analytics & Performance</h2>
+            </div>
+
+            <div class="analytics-grid">
+                <div class="chart-card">
+                    <h3>Platform Overview</h3>
+                    <div class="chart-placeholder">
+                        <i class="fas fa-chart-line"></i>
+                        <p>Analytics data will be displayed here</p>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Top Performers</h3>
+                    <div id="top-talents" class="top-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Edit Talent -->
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Talent</h3>
+                <button class="close-modal" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit-talent-id">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="edit-name" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="edit-status" class="form-control">
+                        <option value="online">Online</option>
+                        <option value="offline">Offline</option>
+                        <option value="live">Live</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Bio</label>
+                    <textarea id="edit-bio" class="form-control" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveTalent()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

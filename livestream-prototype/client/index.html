@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiveStream - Watch Live Shows</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-video"></i>
+                <h1>LiveStream</h1>
+            </div>
+            <nav class="nav">
+                <a href="#" class="nav-link active">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="#" class="nav-link">
+                    <i class="fas fa-fire"></i>
+                    <span>Trending</span>
+                </a>
+                <a href="#" class="nav-link">
+                    <i class="fas fa-star"></i>
+                    <span>Following</span>
+                </a>
+            </nav>
+            <div class="user-actions">
+                <button class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Go Live
+                </button>
+                <div class="user-avatar">
+                    <img src="https://i.pravatar.cc/40?img=50" alt="User">
+                </div>
+            </div>
+        </header>
+
+        <!-- Live Streams Grid -->
+        <section class="livestreams-section">
+            <div class="section-header">
+                <h2>
+                    <i class="fas fa-broadcast-tower"></i>
+                    Live Now
+                </h2>
+                <div class="live-indicator">
+                    <span class="pulse"></span>
+                    <span id="live-count">0</span> Live
+                </div>
+            </div>
+
+            <div id="livestreams-grid" class="livestreams-grid">
+                <!-- Livestreams akan di-render di sini -->
+            </div>
+        </section>
+
+        <!-- Suggested Talents -->
+        <section class="talents-section">
+            <div class="section-header">
+                <h2>
+                    <i class="fas fa-users"></i>
+                    Suggested Talents
+                </h2>
+            </div>
+
+            <div id="talents-grid" class="talents-grid">
+                <!-- Talents akan di-render di sini -->
+            </div>
+        </section>
+    </div>
+
+    <!-- Live Viewer Modal -->
+    <div id="live-viewer-modal" class="modal">
+        <div class="modal-overlay" onclick="closeViewer()"></div>
+        <div class="live-viewer">
+            <!-- Close Button -->
+            <button class="close-viewer" onclick="closeViewer()">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <!-- Video Player -->
+            <div class="video-container">
+                <div id="video-player" class="video-player">
+                    <!-- Simulasi livestream dengan animasi -->
+                    <div class="video-placeholder">
+                        <div class="livestream-animation">
+                            <i class="fas fa-video"></i>
+                        </div>
+                        <p>Live Streaming...</p>
+                    </div>
+                </div>
+
+                <!-- Overlay Info -->
+                <div class="video-overlay">
+                    <!-- Top Info -->
+                    <div class="top-info">
+                        <div class="talent-info">
+                            <img id="viewer-talent-avatar" src="" alt="Talent">
+                            <div>
+                                <div id="viewer-talent-name" class="talent-name"></div>
+                                <div class="viewer-count">
+                                    <i class="fas fa-eye"></i>
+                                    <span id="viewer-count">0</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="follow-btn">
+                            <i class="fas fa-user-plus"></i> Follow
+                        </button>
+                    </div>
+
+                    <!-- Chat Container -->
+                    <div class="chat-container">
+                        <div id="chat-messages" class="chat-messages">
+                            <!-- Chat messages akan muncul di sini -->
+                        </div>
+                    </div>
+
+                    <!-- Bottom Actions -->
+                    <div class="bottom-actions">
+                        <div class="chat-input-container">
+                            <input
+                                type="text"
+                                id="chat-input"
+                                placeholder="Say something..."
+                                maxlength="100"
+                            >
+                            <button onclick="sendComment()">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button class="action-btn like-btn" onclick="sendLike()">
+                                <i class="fas fa-heart"></i>
+                                <span id="like-count">0</span>
+                            </button>
+                            <button class="action-btn gift-btn" onclick="showGiftMenu()">
+                                <i class="fas fa-gift"></i>
+                                <span>Gift</span>
+                            </button>
+                            <button class="action-btn share-btn">
+                                <i class="fas fa-share"></i>
+                                <span>Share</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Like Animation Container -->
+                <div id="like-animation-container" class="like-animation-container"></div>
+            </div>
+
+            <!-- Gift Menu -->
+            <div id="gift-menu" class="gift-menu">
+                <div class="gift-menu-header">
+                    <h3>Send Gift</h3>
+                    <button onclick="closeGiftMenu()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="gift-grid">
+                    <div class="gift-item" onclick="sendGift(1)">
+                        <i class="fas fa-heart"></i>
+                        <span>Rose</span>
+                        <span class="gift-price">1 💎</span>
+                    </div>
+                    <div class="gift-item" onclick="sendGift(5)">
+                        <i class="fas fa-star"></i>
+                        <span>Star</span>
+                        <span class="gift-price">5 💎</span>
+                    </div>
+                    <div class="gift-item" onclick="sendGift(10)">
+                        <i class="fas fa-crown"></i>
+                        <span>Crown</span>
+                        <span class="gift-price">10 💎</span>
+                    </div>
+                    <div class="gift-item" onclick="sendGift(50)">
+                        <i class="fas fa-rocket"></i>
+                        <span>Rocket</span>
+                        <span class="gift-price">50 💎</span>
+                    </div>
+                    <div class="gift-item" onclick="sendGift(100)">
+                        <i class="fas fa-trophy"></i>
+                        <span>Trophy</span>
+                        <span class="gift-price">100 💎</span>
+                    </div>
+                    <div class="gift-item" onclick="sendGift(500)">
+                        <i class="fas fa-gem"></i>
+                        <span>Diamond</span>
+                        <span class="gift-price">500 💎</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Start Guide - LiveStream Prototype</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #2c3e50;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card h3 {
+            color: #764ba2;
+            margin: 20px 0 10px;
+            font-size: 20px;
+        }
+
+        .step {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .step h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .code {
+            background: #2c3e50;
+            color: #27ae60;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .feature {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .feature-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .alert {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+
+        .list {
+            margin: 15px 0;
+            padding-left: 20px;
+        }
+
+        .list li {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+
+        .architecture {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            white-space: pre;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎥 LiveStream Prototype</h1>
+            <p>Quick Start Guide - Broadcasting Platform</p>
+        </div>
+
+        <!-- Overview -->
+        <div class="card">
+            <h2>📋 Overview</h2>
+            <p>Selamat datang! Ini adalah prototype aplikasi live streaming dengan model broadcasting seperti <strong>Bigo Live</strong> dan <strong>Hot51</strong>.</p>
+
+            <div class="feature-grid" style="margin-top: 20px;">
+                <div class="feature">
+                    <div class="feature-icon">👥</div>
+                    <strong>Talent Management</strong>
+                    <p style="font-size: 12px; margin-top: 5px;">Kelola semua talent</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📺</div>
+                    <strong>Live Streaming</strong>
+                    <p style="font-size: 12px; margin-top: 5px;">Broadcasting real-time</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">💬</div>
+                    <strong>Live Chat</strong>
+                    <p style="font-size: 12px; margin-top: 5px;">Interaksi real-time</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🎁</div>
+                    <strong>Gift System</strong>
+                    <p style="font-size: 12px; margin-top: 5px;">Diamond & rewards</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Start -->
+        <div class="card">
+            <h2>🚀 Quick Start (3 Langkah Mudah)</h2>
+
+            <div class="step">
+                <h4>Step 1: Install Dependencies</h4>
+                <p>Buka terminal/command prompt, navigate ke folder backend:</p>
+                <div class="code">cd livestream-prototype/backend<br>pip install -r requirements.txt</div>
+            </div>
+
+            <div class="step">
+                <h4>Step 2: Start Backend Server</h4>
+                <p>Jalankan server backend:</p>
+                <div class="code">python app.py</div>
+                <p style="margin-top: 10px;">Server akan berjalan di: <strong>http://localhost:5000</strong></p>
+            </div>
+
+            <div class="step">
+                <h4>Step 3: Buka Aplikasi</h4>
+                <p>Gunakan shortcut script atau buka file HTML secara manual:</p>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="alert('Double-click file:\nSTART_SERVER.sh (Mac/Linux)\nSTART_SERVER.bat (Windows)')">
+                        🖥️ Auto Start Server
+                    </button>
+                    <a href="backoffice/index.html" class="btn btn-success" target="_blank">
+                        📊 Open Backoffice
+                    </a>
+                    <a href="client/index.html" class="btn btn-info" target="_blank">
+                        📱 Open Client Viewer
+                    </a>
+                </div>
+            </div>
+
+            <div class="alert alert-success">
+                <strong>✓ Selesai!</strong> Sistem sudah siap digunakan untuk demo ke client.
+            </div>
+        </div>
+
+        <!-- Architecture -->
+        <div class="card">
+            <h2>🏗️ Arsitektur Sistem</h2>
+            <div class="architecture">livestream-prototype/
+├── backend/              # Backend API (Flask + Socket.IO)
+│   ├── app.py           # Main application
+│   ├── database.py      # Data management
+│   └── requirements.txt # Dependencies
+│
+├── backoffice/          # Admin Dashboard
+│   ├── index.html       # Dashboard page
+│   ├── css/style.css    # Styling
+│   └── js/app.js        # Frontend logic
+│
+└── client/              # Viewer App
+    ├── index.html       # Viewer page
+    ├── css/style.css    # Styling
+    └── js/app.js        # Frontend logic</div>
+        </div>
+
+        <!-- Features -->
+        <div class="card">
+            <h2>✨ Fitur Utama</h2>
+
+            <h3>1. Backoffice Dashboard</h3>
+            <ul class="list">
+                <li><strong>Dashboard Overview:</strong> Real-time statistics (talents, livestreams, viewers, diamonds)</li>
+                <li><strong>Talent Management:</strong> CRUD operations untuk manage talent</li>
+                <li><strong>Livestream Monitoring:</strong> Monitor semua active livestreams</li>
+                <li><strong>Analytics:</strong> Performance metrics dan top performers</li>
+                <li><strong>Real-time Updates:</strong> Auto-update via WebSocket</li>
+            </ul>
+
+            <h3>2. Client Viewer</h3>
+            <ul class="list">
+                <li><strong>Browse Livestreams:</strong> Lihat semua livestream yang sedang LIVE</li>
+                <li><strong>Watch Live:</strong> Join livestream dengan 1 click</li>
+                <li><strong>Live Chat:</strong> Chat real-time dengan viewers lain</li>
+                <li><strong>Like System:</strong> Send likes dengan animasi floating hearts</li>
+                <li><strong>Gift System:</strong> Send virtual gifts (diamonds) ke talent</li>
+                <li><strong>Viewer Count:</strong> Real-time viewer count update</li>
+            </ul>
+
+            <h3>3. Backend API</h3>
+            <ul class="list">
+                <li><strong>RESTful API:</strong> CRUD endpoints untuk talents & livestreams</li>
+                <li><strong>WebSocket:</strong> Real-time communication via Socket.IO</li>
+                <li><strong>Statistics:</strong> Platform-wide analytics</li>
+                <li><strong>Auto-sync:</strong> Data sync across all clients</li>
+            </ul>
+        </div>
+
+        <!-- Demo Flow -->
+        <div class="card">
+            <h2>🎬 Demo Flow untuk Presentasi Client</h2>
+
+            <div class="step">
+                <h4>Skenario 1: Admin/Management View</h4>
+                <ol class="list">
+                    <li>Buka <strong>Backoffice Dashboard</strong></li>
+                    <li>Tunjukkan overview statistics (total talents, active streams, viewers, revenue)</li>
+                    <li>Masuk ke <strong>Talent Management</strong> - edit talent, change status</li>
+                    <li>Masuk ke <strong>Active Livestreams</strong> - monitoring real-time</li>
+                    <li>Demonstrasikan real-time update (data auto-refresh)</li>
+                </ol>
+            </div>
+
+            <div class="step">
+                <h4>Skenario 2: User/Viewer Experience</h4>
+                <ol class="list">
+                    <li>Buka <strong>Client Viewer</strong> di browser/tab berbeda</li>
+                    <li>Browse livestreams yang tersedia</li>
+                    <li>Click card untuk join livestream</li>
+                    <li>Test live chat - kirim beberapa messages</li>
+                    <li>Click Like button - lihat floating hearts animation</li>
+                    <li>Click Gift - pilih gift dan send</li>
+                    <li>Lihat viewer count yang update real-time</li>
+                </ol>
+            </div>
+
+            <div class="step">
+                <h4>Skenario 3: Multi-Viewer Simulation</h4>
+                <ol class="list">
+                    <li>Buka <strong>Client Viewer</strong> di multiple tabs/browsers</li>
+                    <li>Join livestream yang sama dari berbagai tabs</li>
+                    <li>Send chat dari masing-masing tab</li>
+                    <li>Send likes & gifts</li>
+                    <li>Perhatikan semua updates sync real-time di semua tabs</li>
+                    <li>Check Backoffice - lihat statistics update real-time</li>
+                </ol>
+            </div>
+
+            <div class="alert">
+                <strong>💡 Tips:</strong> Buka Backoffice dan Client secara bersamaan dalam 2 windows/monitors untuk demonstrasi yang lebih impactful!
+            </div>
+        </div>
+
+        <!-- Sample Data -->
+        <div class="card">
+            <h2>📊 Demo Data</h2>
+            <p>Sistem sudah dilengkapi dengan sample data siap pakai:</p>
+
+            <h3>5 Sample Talents:</h3>
+            <ul class="list">
+                <li><strong>Sarah Beauty</strong> - Online (12.5K followers)</li>
+                <li><strong>Mike Gaming</strong> - 🔴 LIVE (28.9K followers)</li>
+                <li><strong>Lisa Music</strong> - Offline (8.2K followers)</li>
+                <li><strong>David Fitness</strong> - 🔴 LIVE (19.8K followers)</li>
+                <li><strong>Anna Cook</strong> - Online (15.6K followers)</li>
+            </ul>
+
+            <h3>Active Livestreams:</h3>
+            <ul class="list">
+                <li>Mike Gaming's Live Stream (Gaming content)</li>
+                <li>David Fitness's Live Stream (Fitness workout)</li>
+            </ul>
+        </div>
+
+        <!-- API Endpoints -->
+        <div class="card">
+            <h2>🔌 API Endpoints Reference</h2>
+            <p>Base URL: <code>http://localhost:5000/api</code></p>
+
+            <h3>Talents:</h3>
+            <div class="code">GET  /api/talents           - Get all talents
+GET  /api/talents/:id      - Get talent by ID
+PUT  /api/talents/:id      - Update talent
+PUT  /api/talents/:id/status - Update talent status</div>
+
+            <h3>Livestreams:</h3>
+            <div class="code">GET  /api/livestreams       - Get active livestreams
+GET  /api/livestreams/:id  - Get livestream by ID
+POST /api/livestreams      - Create new livestream
+POST /api/livestreams/:id/end  - End livestream
+POST /api/livestreams/:id/like - Add like
+POST /api/livestreams/:id/gift - Send gift</div>
+
+            <h3>Statistics:</h3>
+            <div class="code">GET  /api/stats            - Get platform statistics</div>
+        </div>
+
+        <!-- Technical Notes -->
+        <div class="card">
+            <h2>⚙️ Technical Notes</h2>
+
+            <div class="alert">
+                <strong>⚠️ Ini adalah PROTOTYPE/MOCKUP untuk demo purposes:</strong>
+            </div>
+
+            <ul class="list">
+                <li><strong>Database:</strong> In-memory storage (data hilang saat server restart)</li>
+                <li><strong>Video Streaming:</strong> Placeholder animation (bukan real video)</li>
+                <li><strong>Authentication:</strong> Belum ada system login/auth</li>
+                <li><strong>Payment:</strong> Gift system belum terintegrasi payment gateway</li>
+                <li><strong>Scalability:</strong> Belum dioptimasi untuk production</li>
+            </ul>
+
+            <h3>Untuk Production Implementation:</h3>
+            <ul class="list">
+                <li>✅ Real Database (PostgreSQL/MongoDB)</li>
+                <li>✅ Video Streaming Infrastructure (WebRTC/HLS/RTMP)</li>
+                <li>✅ Authentication & Authorization (JWT/OAuth)</li>
+                <li>✅ Payment Gateway Integration</li>
+                <li>✅ CDN untuk Video Delivery</li>
+                <li>✅ Load Balancing & Scaling</li>
+                <li>✅ Content Moderation System</li>
+                <li>✅ Mobile Apps (iOS/Android)</li>
+            </ul>
+        </div>
+
+        <!-- Footer -->
+        <div class="card" style="text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <h2>🎉 Prototype Ready!</h2>
+            <p style="font-size: 18px; margin: 15px 0;">Silakan demo ke client dan diskusikan next steps untuk implementasi production.</p>
+            <div class="button-group" style="justify-content: center; margin-top: 20px;">
+                <a href="README.md" class="btn" style="background: white; color: #667eea;">
+                    📖 Read Full Documentation
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
