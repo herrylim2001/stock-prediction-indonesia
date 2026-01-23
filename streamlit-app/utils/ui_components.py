@@ -691,14 +691,12 @@ def card(content, header=None, footer=None):
 
 def badge(text, variant="default"):
     """Create a badge"""
-    return f'<span class="badge badge-{variant}">{text}</span>'
+    # Use HTML entity to avoid quote conflicts
+    text_safe = text.replace('"', '&quot;')
+    return f'<span class="badge badge-{variant}">{text_safe}</span>'
 
 def avatar(image_url, size="md", status=None):
     """Create an avatar with optional status indicator"""
     status_html = f'<div class="avatar-status {status}"></div>' if status else ''
-    return f"""
-    <div class="avatar avatar-{size}">
-        <img src="{image_url}" alt="Avatar">
-        {status_html}
-    </div>
-    """
+    # Return single-line HTML to avoid quote conflicts in f-strings
+    return f'<div class="avatar avatar-{size}"><img src="{image_url}" alt="Avatar">{status_html}</div>'
