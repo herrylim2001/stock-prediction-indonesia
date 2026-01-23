@@ -1,54 +1,67 @@
 """
 Shared UI Components & Styles
-Inspired by shadcn/ui design system
+Modern TalentFlow-inspired Design System
 """
 
-def get_shadcn_css():
-    """Return shadcn-inspired CSS for professional UI"""
+def get_modern_css():
+    """Return modern CSS with deep indigo/violet palette"""
     return """
     <style>
     /* ============================
-       shadcn/ui Inspired Design System
+       Modern Professional Design System
+       Inspired by TalentFlow
        ============================ */
 
-    /* Import Inter font */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    /* Import Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
-    /* CSS Variables - Design Tokens */
+    /* CSS Variables - Deep Indigo/Violet Palette */
     :root {
-        /* Colors */
-        --background: 0 0% 100%;
-        --foreground: 222.2 84% 4.9%;
-        --card: 0 0% 100%;
-        --card-foreground: 222.2 84% 4.9%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 222.2 84% 4.9%;
-        --primary: 262 83% 58%;
-        --primary-foreground: 210 40% 98%;
-        --secondary: 210 40% 96.1%;
-        --secondary-foreground: 222.2 47.4% 11.2%;
-        --muted: 210 40% 96.1%;
-        --muted-foreground: 215.4 16.3% 46.9%;
-        --accent: 210 40% 96.1%;
-        --accent-foreground: 222.2 47.4% 11.2%;
-        --destructive: 0 84.2% 60.2%;
-        --destructive-foreground: 210 40% 98%;
-        --border: 214.3 31.8% 91.4%;
-        --input: 214.3 31.8% 91.4%;
-        --ring: 262 83% 58%;
-        --radius: 0.5rem;
+        /* Primary Colors - Deep Indigo/Violet */
+        --primary: 250 70% 60%;
+        --primary-dark: 250 70% 50%;
+        --primary-light: 250 70% 70%;
+
+        /* Backgrounds - Soft Slate */
+        --background: 210 40% 98%;
+        --surface: 0 0% 100%;
+        --surface-hover: 210 40% 96%;
+
+        /* Text Colors */
+        --foreground: 222 47% 11%;
+        --foreground-muted: 215 16% 47%;
+        --foreground-light: 215 16% 65%;
+
+        /* Accent Colors */
+        --success: 142 71% 45%;
+        --success-light: 142 71% 95%;
+        --warning: 38 92% 50%;
+        --warning-light: 38 92% 95%;
+        --error: 0 84% 60%;
+        --error-light: 0 84% 95%;
+
+        /* Borders & Dividers */
+        --border: 220 13% 91%;
+        --border-hover: 250 70% 60%;
 
         /* Shadows */
         --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-        --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+        --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
         --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
         --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+        /* Radius */
+        --radius: 0.75rem;
+        --radius-sm: 0.5rem;
+        --radius-lg: 1rem;
     }
 
     /* Global Resets */
     * {
-        border-color: hsl(var(--border));
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
     }
 
     body {
@@ -56,60 +69,226 @@ def get_shadcn_css():
         background-color: hsl(var(--background));
         color: hsl(var(--foreground));
         line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
     }
 
     /* Hide Streamlit branding */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
+    .stDeployButton {display: none;}
+
+    /* Streamlit container adjustments */
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+        max-width: 1400px;
+    }
 
     /* ============================
        Typography
        ============================ */
 
-    .heading-1 {
-        font-size: 2.25rem;
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-weight: 700;
+        color: hsl(var(--foreground));
+    }
+
+    .heading-hero {
+        font-size: 3rem;
         font-weight: 800;
-        line-height: 2.5rem;
-        letter-spacing: -0.025em;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(250 70% 50%) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .heading-1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
         color: hsl(var(--foreground));
     }
 
     .heading-2 {
-        font-size: 1.875rem;
+        font-size: 2rem;
         font-weight: 700;
-        line-height: 2.25rem;
-        letter-spacing: -0.025em;
-        color: hsl(var(--foreground));
+        line-height: 1.3;
+        letter-spacing: -0.01em;
     }
 
     .heading-3 {
         font-size: 1.5rem;
         font-weight: 600;
-        line-height: 2rem;
-        color: hsl(var(--foreground));
+        line-height: 1.4;
     }
 
     .heading-4 {
         font-size: 1.25rem;
         font-weight: 600;
-        line-height: 1.75rem;
-        color: hsl(var(--foreground));
+        line-height: 1.5;
     }
 
     .text-muted {
-        color: hsl(var(--muted-foreground));
+        color: hsl(var(--foreground-muted));
         font-size: 0.875rem;
+        line-height: 1.5;
     }
 
-    .text-sm {
-        font-size: 0.875rem;
-        line-height: 1.25rem;
+    .text-light {
+        color: hsl(var(--foreground-light));
     }
 
-    .text-xs {
-        font-size: 0.75rem;
-        line-height: 1rem;
+    /* ============================
+       Glassmorphic Hero Section
+       ============================ */
+
+    .hero-glass {
+        background: linear-gradient(135deg,
+            hsl(250 70% 60% / 0.95) 0%,
+            hsl(270 70% 60% / 0.95) 100%
+        );
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: var(--radius-lg);
+        padding: 3rem;
+        color: white;
+        box-shadow: var(--shadow-xl);
+        border: 1px solid hsl(250 70% 70% / 0.2);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero-glass::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at top right, hsl(280 70% 70% / 0.3) 0%, transparent 50%);
+        pointer-events: none;
+    }
+
+    .hero-glass h1 {
+        color: white;
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 0.75rem;
+        text-shadow: 0 2px 10px rgb(0 0 0 / 0.1);
+    }
+
+    .hero-glass p {
+        color: hsl(250 70% 95%);
+        font-size: 1.125rem;
+        margin-bottom: 1.5rem;
+        opacity: 0.95;
+    }
+
+    .hero-glass .btn {
+        background: white;
+        color: hsl(var(--primary));
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--radius);
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
+    }
+
+    .hero-glass .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgb(0 0 0 / 0.2);
+    }
+
+    /* ============================
+       Stats Cards (Modern)
+       ============================ */
+
+    .stat-card {
+        background: hsl(var(--surface));
+        border: 1px solid hsl(var(--border));
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+        border-color: hsl(var(--border-hover));
+    }
+
+    .stat-card-icon {
+        width: 3rem;
+        height: 3rem;
+        border-radius: var(--radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .stat-card-icon.purple {
+        background: linear-gradient(135deg, hsl(250 70% 60%) 0%, hsl(270 70% 60%) 100%);
+    }
+
+    .stat-card-icon.blue {
+        background: linear-gradient(135deg, hsl(210 70% 60%) 0%, hsl(220 70% 60%) 100%);
+    }
+
+    .stat-card-icon.green {
+        background: linear-gradient(135deg, hsl(142 71% 50%) 0%, hsl(152 71% 50%) 100%);
+    }
+
+    .stat-card-icon.orange {
+        background: linear-gradient(135deg, hsl(25 90% 60%) 0%, hsl(35 90% 60%) 100%);
+    }
+
+    .stat-card-label {
+        color: hsl(var(--foreground-muted));
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-card-value {
+        font-size: 2rem;
+        font-weight: 800;
+        color: hsl(var(--foreground));
+        margin-bottom: 0.5rem;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    .stat-card-change {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--radius-sm);
+    }
+
+    .stat-card-change.positive {
+        background: hsl(var(--success-light));
+        color: hsl(var(--success));
+    }
+
+    .stat-card-change.negative {
+        background: hsl(var(--error-light));
+        color: hsl(var(--error));
     }
 
     /* ============================
@@ -117,21 +296,29 @@ def get_shadcn_css():
        ============================ */
 
     .card {
-        background-color: hsl(var(--card));
+        background: hsl(var(--surface));
         border: 1px solid hsl(var(--border));
-        border-radius: var(--radius);
+        border-radius: var(--radius-lg);
         box-shadow: var(--shadow-sm);
         transition: all 0.2s ease;
+        overflow: hidden;
     }
 
     .card:hover {
         box-shadow: var(--shadow-md);
-        border-color: hsl(var(--primary) / 0.3);
     }
 
     .card-header {
         padding: 1.5rem;
         border-bottom: 1px solid hsl(var(--border));
+        background: hsl(var(--surface));
+    }
+
+    .card-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: hsl(var(--foreground));
     }
 
     .card-content {
@@ -141,86 +328,7 @@ def get_shadcn_css():
     .card-footer {
         padding: 1.5rem;
         border-top: 1px solid hsl(var(--border));
-    }
-
-    /* ============================
-       Stat Cards (Metrics)
-       ============================ */
-
-    .stat-card {
-        background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 100%);
-        border: 1px solid hsl(var(--primary) / 0.2);
-        border-radius: calc(var(--radius) + 2px);
-        padding: 1.5rem;
-        box-shadow: var(--shadow);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .stat-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 100px;
-        height: 100px;
-        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-        border-radius: 50%;
-        transform: translate(30%, -30%);
-    }
-
-    .stat-card:hover {
-        transform: translateY(-4px);
-        box-shadow: var(--shadow-lg);
-    }
-
-    .stat-card-title {
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: rgba(255, 255, 255, 0.9);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 0.5rem;
-    }
-
-    .stat-card-value {
-        font-size: 2.5rem;
-        font-weight: 800;
-        color: white;
-        line-height: 1;
-        margin-bottom: 0.5rem;
-    }
-
-    .stat-card-description {
-        font-size: 0.875rem;
-        color: rgba(255, 255, 255, 0.8);
-        font-weight: 400;
-    }
-
-    .stat-card-icon {
-        position: absolute;
-        right: 1.5rem;
-        top: 1.5rem;
-        font-size: 2.5rem;
-        opacity: 0.2;
-    }
-
-    /* Color variants */
-    .stat-card.blue {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-
-    .stat-card.green {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    }
-
-    .stat-card.purple {
-        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    }
-
-    .stat-card.orange {
-        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        background: hsl(var(--background));
     }
 
     /* ============================
@@ -230,174 +338,44 @@ def get_shadcn_css():
     .badge {
         display: inline-flex;
         align-items: center;
-        border-radius: calc(var(--radius) - 2px);
-        padding: 0.25rem 0.75rem;
+        gap: 0.375rem;
+        padding: 0.375rem 0.75rem;
+        border-radius: var(--radius-sm);
         font-size: 0.75rem;
         font-weight: 600;
-        line-height: 1;
-        transition: all 0.2s ease;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-    }
-
-    .badge-default {
-        background-color: hsl(var(--primary));
-        color: hsl(var(--primary-foreground));
-    }
-
-    .badge-secondary {
-        background-color: hsl(var(--secondary));
-        color: hsl(var(--secondary-foreground));
-    }
-
-    .badge-outline {
-        border: 1px solid hsl(var(--border));
-        background-color: transparent;
-        color: hsl(var(--foreground));
+        transition: all 0.2s ease;
     }
 
     .badge-success {
-        background-color: hsl(142 76% 36%);
-        color: white;
+        background: hsl(var(--success-light));
+        color: hsl(var(--success));
+        border: 1px solid hsl(var(--success) / 0.2);
     }
 
     .badge-warning {
-        background-color: hsl(38 92% 50%);
-        color: white;
+        background: hsl(var(--warning-light));
+        color: hsl(var(--warning));
+        border: 1px solid hsl(var(--warning) / 0.2);
     }
 
     .badge-error {
-        background-color: hsl(var(--destructive));
-        color: hsl(var(--destructive-foreground));
+        background: hsl(var(--error-light));
+        color: hsl(var(--error));
+        border: 1px solid hsl(var(--error) / 0.2);
     }
 
-    /* ============================
-       Button Component
-       ============================ */
-
-    .btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: var(--radius);
-        font-size: 0.875rem;
-        font-weight: 600;
-        transition: all 0.2s ease;
-        cursor: pointer;
-        border: 1px solid transparent;
-        padding: 0.625rem 1.25rem;
-        text-decoration: none;
-        gap: 0.5rem;
-    }
-
-    .btn:hover {
-        transform: translateY(-1px);
-    }
-
-    .btn-primary {
-        background-color: hsl(var(--primary));
-        color: hsl(var(--primary-foreground));
-        box-shadow: var(--shadow-sm);
-    }
-
-    .btn-primary:hover {
-        background-color: hsl(var(--primary) / 0.9);
-        box-shadow: var(--shadow);
-    }
-
-    .btn-secondary {
-        background-color: hsl(var(--secondary));
-        color: hsl(var(--secondary-foreground));
-    }
-
-    .btn-secondary:hover {
-        background-color: hsl(var(--secondary) / 0.8);
-    }
-
-    .btn-outline {
+    .badge-default {
+        background: hsl(var(--background));
+        color: hsl(var(--foreground-muted));
         border: 1px solid hsl(var(--border));
-        background-color: transparent;
-        color: hsl(var(--foreground));
     }
 
-    .btn-outline:hover {
-        background-color: hsl(var(--accent));
-    }
-
-    .btn-ghost {
-        background-color: transparent;
-        color: hsl(var(--foreground));
-    }
-
-    .btn-ghost:hover {
-        background-color: hsl(var(--accent));
-    }
-
-    /* ============================
-       Table Component
-       ============================ */
-
-    .table-container {
-        border: 1px solid hsl(var(--border));
-        border-radius: var(--radius);
-        overflow: hidden;
-        background-color: hsl(var(--card));
-        box-shadow: var(--shadow-sm);
-    }
-
-    .table-header {
-        background-color: hsl(var(--muted));
-        padding: 1rem 1.5rem;
-        border-bottom: 1px solid hsl(var(--border));
-    }
-
-    .table-row {
-        border-bottom: 1px solid hsl(var(--border));
-        transition: background-color 0.2s ease;
-    }
-
-    .table-row:hover {
-        background-color: hsl(var(--muted) / 0.5);
-    }
-
-    .table-cell {
-        padding: 1rem 1.5rem;
-        font-size: 0.875rem;
-    }
-
-    /* ============================
-       Alert Component
-       ============================ */
-
-    .alert {
-        border-radius: var(--radius);
-        padding: 1rem 1.5rem;
-        border: 1px solid hsl(var(--border));
-        margin: 1rem 0;
-    }
-
-    .alert-info {
-        background-color: hsl(221 83% 97%);
-        border-color: hsl(221 83% 85%);
-        color: hsl(221 83% 30%);
-    }
-
-    .alert-success {
-        background-color: hsl(142 76% 97%);
-        border-color: hsl(142 76% 85%);
-        color: hsl(142 76% 25%);
-    }
-
-    .alert-warning {
-        background-color: hsl(38 92% 97%);
-        border-color: hsl(38 92% 85%);
-        color: hsl(38 92% 30%);
-    }
-
-    .alert-error {
-        background-color: hsl(0 84% 97%);
-        border-color: hsl(0 84% 85%);
-        color: hsl(0 84% 35%);
+    .badge-primary {
+        background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(270 70% 60%) 100%);
+        color: white;
+        border: none;
     }
 
     /* ============================
@@ -406,12 +384,18 @@ def get_shadcn_css():
 
     .avatar {
         position: relative;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
+        display: inline-block;
         border-radius: 9999px;
-        background-color: hsl(var(--muted));
+        overflow: hidden;
+        border: 2px solid hsl(var(--border));
+        background: hsl(var(--background));
+    }
+
+    .avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
     }
 
     .avatar-sm {
@@ -420,50 +404,46 @@ def get_shadcn_css():
     }
 
     .avatar-md {
+        width: 2.5rem;
+        height: 2.5rem;
+    }
+
+    .avatar-lg {
         width: 3rem;
         height: 3rem;
     }
 
-    .avatar-lg {
+    .avatar-xl {
         width: 4rem;
         height: 4rem;
-    }
-
-    .avatar-xl {
-        width: 6rem;
-        height: 6rem;
-    }
-
-    .avatar img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
     }
 
     .avatar-status {
         position: absolute;
         bottom: 0;
         right: 0;
-        width: 25%;
-        height: 25%;
+        width: 0.75rem;
+        height: 0.75rem;
         border-radius: 9999px;
-        border: 2px solid hsl(var(--background));
+        border: 2px solid hsl(var(--surface));
     }
 
     .avatar-status.online {
-        background-color: hsl(142 76% 36%);
-    }
-
-    .avatar-status.offline {
-        background-color: hsl(var(--muted-foreground));
+        background: hsl(var(--success));
+        box-shadow: 0 0 0 2px hsl(var(--success) / 0.2);
     }
 
     .avatar-status.live {
-        background-color: hsl(0 84% 60%);
-        animation: pulse-status 2s infinite;
+        background: hsl(var(--error));
+        box-shadow: 0 0 0 2px hsl(var(--error) / 0.2);
+        animation: pulse-live 2s infinite;
     }
 
-    @keyframes pulse-status {
+    .avatar-status.offline {
+        background: hsl(var(--foreground-light));
+    }
+
+    @keyframes pulse-live {
         0%, 100% {
             opacity: 1;
             transform: scale(1);
@@ -475,13 +455,128 @@ def get_shadcn_css():
     }
 
     /* ============================
+       Table Component
+       ============================ */
+
+    .table-row {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid hsl(var(--border));
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    .table-row:last-child {
+        border-bottom: none;
+    }
+
+    .table-row:hover {
+        background: hsl(var(--surface-hover));
+        border-radius: var(--radius);
+    }
+
+    /* ============================
+       Progress Bar
+       ============================ */
+
+    .progress {
+        width: 100%;
+        height: 0.5rem;
+        background: hsl(var(--background));
+        border-radius: 9999px;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(270 70% 60%) 100%);
+        border-radius: 9999px;
+        transition: width 0.3s ease;
+    }
+
+    /* ============================
+       Button Component
+       ============================ */
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--radius);
+        font-weight: 600;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: none;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(270 70% 60%) 100%);
+        color: white;
+        box-shadow: 0 2px 8px hsl(var(--primary) / 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px hsl(var(--primary) / 0.4);
+    }
+
+    .btn-secondary {
+        background: hsl(var(--surface));
+        color: hsl(var(--foreground));
+        border: 1px solid hsl(var(--border));
+    }
+
+    .btn-secondary:hover {
+        background: hsl(var(--surface-hover));
+        border-color: hsl(var(--border-hover));
+    }
+
+    /* ============================
+       Alert Component
+       ============================ */
+
+    .alert {
+        padding: 1rem 1.5rem;
+        border-radius: var(--radius);
+        border: 1px solid;
+        margin: 1rem 0;
+    }
+
+    .alert-info {
+        background: hsl(210 70% 96%);
+        border-color: hsl(210 70% 80%);
+        color: hsl(210 70% 40%);
+    }
+
+    .alert-success {
+        background: hsl(var(--success-light));
+        border-color: hsl(var(--success) / 0.3);
+        color: hsl(var(--success));
+    }
+
+    .alert-warning {
+        background: hsl(var(--warning-light));
+        border-color: hsl(var(--warning) / 0.3);
+        color: hsl(var(--warning));
+    }
+
+    .alert-error {
+        background: hsl(var(--error-light));
+        border-color: hsl(var(--error) / 0.3);
+        color: hsl(var(--error));
+    }
+
+    /* ============================
        Separator
        ============================ */
 
     .separator {
         height: 1px;
-        background-color: hsl(var(--border));
-        margin: 1.5rem 0;
+        background: hsl(var(--border));
+        margin: 2rem 0;
     }
 
     /* ============================
@@ -513,12 +608,6 @@ def get_shadcn_css():
        Utility Classes
        ============================ */
 
-    .container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 0 1.5rem;
-    }
-
     .flex {
         display: flex;
     }
@@ -535,65 +624,54 @@ def get_shadcn_css():
         justify-content: space-between;
     }
 
+    .gap-1 {
+        gap: 0.25rem;
+    }
+
     .gap-2 {
         gap: 0.5rem;
+    }
+
+    .gap-3 {
+        gap: 0.75rem;
     }
 
     .gap-4 {
         gap: 1rem;
     }
 
-    .gap-6 {
-        gap: 1.5rem;
+    .mb-1 {
+        margin-bottom: 0.25rem;
     }
 
-    .p-4 {
-        padding: 1rem;
+    .mb-2 {
+        margin-bottom: 0.5rem;
     }
 
-    .p-6 {
-        padding: 1.5rem;
+    .mb-3 {
+        margin-bottom: 0.75rem;
     }
 
     .mb-4 {
         margin-bottom: 1rem;
     }
 
-    .mb-6 {
-        margin-bottom: 1.5rem;
-    }
-
     .mt-4 {
         margin-top: 1rem;
     }
 
-    .mt-6 {
-        margin-top: 1.5rem;
+    /* ============================
+       Hover Effects & Animations
+       ============================ */
+
+    .hover-lift {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
-    .rounded {
-        border-radius: var(--radius);
-    }
-
-    .rounded-lg {
-        border-radius: calc(var(--radius) + 4px);
-    }
-
-    .shadow {
-        box-shadow: var(--shadow);
-    }
-
-    .shadow-md {
+    .hover-lift:hover {
+        transform: translateY(-2px);
         box-shadow: var(--shadow-md);
     }
-
-    .shadow-lg {
-        box-shadow: var(--shadow-lg);
-    }
-
-    /* ============================
-       Animations
-       ============================ */
 
     @keyframes fade-in {
         from {
@@ -606,97 +684,79 @@ def get_shadcn_css():
         }
     }
 
-    .animate-fade-in {
-        animation: fade-in 0.3s ease-out;
-    }
-
-    @keyframes slide-in {
-        from {
-            transform: translateX(-100%);
-        }
-        to {
-            transform: translateX(0);
-        }
-    }
-
-    .animate-slide-in {
-        animation: slide-in 0.3s ease-out;
+    .fade-in {
+        animation: fade-in 0.3s ease;
     }
 
     /* ============================
-       Streamlit Overrides
+       Scrollbar Styling
        ============================ */
 
-    .stButton>button {
-        background-color: hsl(var(--primary)) !important;
-        color: hsl(var(--primary-foreground)) !important;
-        border: none !important;
-        border-radius: var(--radius) !important;
-        padding: 0.625rem 1.25rem !important;
-        font-weight: 600 !important;
-        transition: all 0.2s ease !important;
-        box-shadow: var(--shadow-sm) !important;
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
     }
 
-    .stButton>button:hover {
-        background-color: hsl(var(--primary) / 0.9) !important;
-        transform: translateY(-1px) !important;
-        box-shadow: var(--shadow) !important;
+    ::-webkit-scrollbar-track {
+        background: hsl(var(--background));
     }
 
-    .stSelectbox, .stTextInput, .stTextArea {
-        border-radius: var(--radius) !important;
+    ::-webkit-scrollbar-thumb {
+        background: hsl(var(--border));
+        border-radius: 4px;
     }
 
-    /* Metric cards */
-    [data-testid="stMetricValue"] {
-        font-size: 2rem !important;
-        font-weight: 700 !important;
+    ::-webkit-scrollbar-thumb:hover {
+        background: hsl(var(--foreground-muted));
     }
-
-    [data-testid="stMetricLabel"] {
-        font-size: 0.875rem !important;
-        font-weight: 500 !important;
-        color: hsl(var(--muted-foreground)) !important;
-    }
-
     </style>
     """
 
-def stat_card(title, value, description, icon="📊", color="blue"):
-    """Create a professional stat card"""
+def stat_card(label, value, change=None, change_positive=True, icon="📊", icon_color="purple"):
+    """Create a modern stat card"""
+    change_html = ""
+    if change:
+        change_class = "positive" if change_positive else "negative"
+        arrow = "↗" if change_positive else "↘"
+        change_html = f'<div class="stat-card-change {change_class}">{arrow} {change}</div>'
+
     return f"""
-    <div class="stat-card {color}">
-        <div class="stat-card-icon">{icon}</div>
-        <div class="stat-card-title">{title}</div>
+    <div class="stat-card hover-lift">
+        <div class="stat-card-icon {icon_color}">{icon}</div>
+        <div class="stat-card-label">{label}</div>
         <div class="stat-card-value">{value}</div>
-        <div class="stat-card-description">{description}</div>
-    </div>
-    """
-
-def card(content, header=None, footer=None):
-    """Create a card component"""
-    header_html = f'<div class="card-header"><h3 class="heading-4">{header}</h3></div>' if header else ''
-    footer_html = f'<div class="card-footer">{footer}</div>' if footer else ''
-
-    return f"""
-    <div class="card">
-        {header_html}
-        <div class="card-content">
-            {content}
-        </div>
-        {footer_html}
+        {change_html}
     </div>
     """
 
 def badge(text, variant="default"):
     """Create a badge"""
-    # Use HTML entity to avoid quote conflicts
     text_safe = text.replace('"', '&quot;')
     return f'<span class="badge badge-{variant}">{text_safe}</span>'
 
 def avatar(image_url, size="md", status=None):
     """Create an avatar with optional status indicator"""
     status_html = f'<div class="avatar-status {status}"></div>' if status else ''
-    # Return single-line HTML to avoid quote conflicts in f-strings
     return f'<div class="avatar avatar-{size}"><img src="{image_url}" alt="Avatar">{status_html}</div>'
+
+def progress_bar(percentage, color="primary"):
+    """Create a progress bar"""
+    return f"""
+    <div class="progress">
+        <div class="progress-bar" style="width: {percentage}%;"></div>
+    </div>
+    """
+
+def hero_section(title, subtitle, button_text=None, button_url=None):
+    """Create a glassmorphic hero section"""
+    button_html = ""
+    if button_text:
+        button_html = f'<button class="btn" onclick="window.location.href=\'{button_url}\'">{button_text}</button>'
+
+    return f"""
+    <div class="hero-glass fade-in">
+        <h1>{title}</h1>
+        <p>{subtitle}</p>
+        {button_html}
+    </div>
+    """
