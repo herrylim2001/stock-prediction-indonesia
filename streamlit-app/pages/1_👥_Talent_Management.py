@@ -1,12 +1,12 @@
 """
 👥 Talent Management Page
-Professional talent management with shadcn/ui design
+Modern TalentFlow-inspired design
 """
 import streamlit as st
 import sys
 sys.path.append('..')
 from utils.data_manager import get_data_manager
-from utils.ui_components import get_shadcn_css, badge, avatar, card
+from utils.ui_components import get_modern_css, badge, avatar, stat_card, progress_bar
 import pandas as pd
 
 # Page config
@@ -16,23 +16,28 @@ st.set_page_config(
     layout="wide"
 )
 
-# Apply shadcn CSS
-st.markdown(get_shadcn_css(), unsafe_allow_html=True)
+# Apply modern CSS
+st.markdown(get_modern_css(), unsafe_allow_html=True)
 
 # Initialize data manager
 dm = get_data_manager()
 
 # Header
 st.markdown("""
-<div style="margin-bottom: 2rem;">
+<div style="margin-bottom: 2.5rem;">
     <h1 class="heading-1">👥 Talent Management</h1>
-    <p class="text-muted" style="font-size: 1rem; margin-top: 0.5rem;">
-        Manage all talents, update profiles, and track performance
+    <p class="text-muted" style="font-size: 1.125rem; margin-top: 0.75rem;">
+        Manage all talents, update profiles, and track performance metrics
     </p>
 </div>
 """, unsafe_allow_html=True)
 
-# Filters and actions
+# Filters and Search
+st.markdown("""
+<div class="card" style="margin-bottom: 2rem;">
+    <div class="card-content" style="padding: 1.25rem;">
+""", unsafe_allow_html=True)
+
 col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
 
 with col1:
@@ -57,7 +62,10 @@ with col4:
     if st.button("🔄 Refresh", use_container_width=True):
         st.rerun()
 
-st.markdown('<div class="separator"></div>', unsafe_allow_html=True)
+st.markdown("""
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # Get talents
 talents = dm.get_all_talents()
@@ -82,264 +90,266 @@ sort_mapping = {
 if sort_by in sort_mapping:
     talents = sorted(talents, key=lambda x: x.get(sort_mapping[sort_by], 0), reverse=(sort_by != "Name"))
 
-# Summary stats
+# Summary Stats
 col1, col2, col3, col4 = st.columns(4)
+
 with col1:
-    st.metric("Total Talents", len(dm.get_all_talents()))
+    st.markdown(stat_card(
+        label="Total Talents",
+        value=str(len(dm.get_all_talents())),
+        icon="👥",
+        icon_color="purple"
+    ), unsafe_allow_html=True)
+
 with col2:
-    st.metric("Filtered Results", len(talents))
+    st.markdown(stat_card(
+        label="Filtered Results",
+        value=str(len(talents)),
+        icon="🔍",
+        icon_color="blue"
+    ), unsafe_allow_html=True)
+
 with col3:
     live_count = len([t for t in talents if t['status'] == 'live'])
-    st.metric("Live Now", live_count)
+    st.markdown(stat_card(
+        label="Live Now",
+        value=str(live_count),
+        icon="🔴",
+        icon_color="orange"
+    ), unsafe_allow_html=True)
+
 with col4:
     online_count = len([t for t in talents if t['status'] in ['online', 'live']])
-    st.metric("Online", online_count)
+    st.markdown(stat_card(
+        label="Online",
+        value=str(online_count),
+        icon="🟢",
+        icon_color="green"
+    ), unsafe_allow_html=True)
 
 st.markdown('<div class="separator"></div>', unsafe_allow_html=True)
+
+# Display Mode Selection
+st.markdown("""
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <div>
+        <h2 class="heading-3">Talent Roster</h2>
+        <p class="text-muted">Complete list of all registered talents</p>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # Display mode toggle
 display_mode = st.radio(
     "Display Mode",
-    ["📋 Table View", "🎴 Card View"],
-    horizontal=True
+    ["Table View", "Card View"],
+    horizontal=True,
+    label_visibility="collapsed"
 )
 
-st.markdown("###")
+st.markdown('<div style="height: 1rem;"></div>', unsafe_allow_html=True)
 
-if display_mode == "📋 Table View":
+if display_mode == "Table View":
     # Professional Table View
-    if talents:
-        st.markdown("""
-        <div class="card" style="padding: 0;">
-            <div class="card-header">
-                <h3 class="heading-4">All Talents</h3>
-                <p class="text-muted">Showing {} of {} talents</p>
-            </div>
-            <div class="card-content" style="padding: 0;">
-        """.format(len(talents), len(dm.get_all_talents())), unsafe_allow_html=True)
+    st.markdown("""
+    <div class="card">
+        <div class="card-header">
+            <h3 class="heading-4">Talent Directory</h3>
+            <p class="text-muted">Detailed view of all talent profiles</p>
+        </div>
+    """, unsafe_allow_html=True)
 
-        # Table
-        for talent in talents:
-            status_color = {
+    for talent in talents:
+        # Status badge variant
+        status_variant = {
+            "live": "error",
+            "online": "success",
+            "offline": "default"
+        }.get(talent['status'], "default")
+
+        status_icon = {
+            "live": "🔴",
+            "online": "🟢",
+            "offline": "⚫"
+        }.get(talent['status'], "⚫")
+
+        # Calculate profile completion
+        profile_completion = min(100, (talent['level'] * 10) + 30)
+
+        st.markdown(f"""
+        <div class="table-row">
+            <div style="display: flex; align-items: center; gap: 1.5rem;">
+                <div style="flex: 0 0 60px;">
+                    {avatar(talent['avatar'], size='lg', status=talent['status'])}
+                </div>
+                <div style="flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                        <span style="font-weight: 600; font-size: 1rem;">{talent['name']}</span>
+                        {badge(f"{status_icon} {talent['status'].upper()}", variant=status_variant)}
+                    </div>
+                    <div class="text-muted" style="font-size: 0.875rem; margin-bottom: 0.5rem;">@{talent['username']}</div>
+                    <div style="display: flex; gap: 2rem; font-size: 0.875rem; color: hsl(var(--foreground-muted));">
+                        <span>👥 {talent['followers']:,} followers</span>
+                        <span>💎 {talent['total_diamonds']:,} diamonds</span>
+                        <span>📊 Level {talent['level']}</span>
+                        <span>📺 {talent.get('total_streams', 0)} streams</span>
+                    </div>
+                </div>
+                <div style="flex: 0 0 200px; text-align: right;">
+                    <div class="text-muted" style="font-size: 0.75rem; margin-bottom: 0.5rem;">Profile Completion</div>
+                    {progress_bar(profile_completion)}
+                    <div style="font-size: 0.75rem; margin-top: 0.25rem; font-weight: 600; color: hsl(var(--primary));">{profile_completion}%</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+else:
+    # Card View
+    cols = st.columns(3)
+
+    for idx, talent in enumerate(talents):
+        with cols[idx % 3]:
+            # Status badge variant
+            status_variant = {
                 "live": "error",
                 "online": "success",
-                "offline": "secondary"
-            }.get(talent['status'], "secondary")
+                "offline": "default"
+            }.get(talent['status'], "default")
 
-            status_emoji = {
+            status_icon = {
                 "live": "🔴",
                 "online": "🟢",
                 "offline": "⚫"
             }.get(talent['status'], "⚫")
 
+            # Calculate profile completion
+            profile_completion = min(100, (talent['level'] * 10) + 30)
+
             st.markdown(f"""
-            <div class="table-row" style="display: flex; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid hsl(var(--border));">
-                <div style="flex: 0 0 60px;">
-                    {avatar(talent['avatar'], size='md', status=talent['status'])}
-                </div>
-                <div style="flex: 1; margin-left: 1rem;">
-                    <div style="font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem;">{talent['name']}</div>
-                    <div style="color: hsl(var(--muted-foreground)); font-size: 0.875rem;">@{talent['username']}</div>
-                    <div style="color: hsl(var(--muted-foreground)); font-size: 0.8rem; margin-top: 0.25rem;">{talent['bio']}</div>
-                </div>
-                <div style="margin: 0 1.5rem; min-width: 100px;">
-                    {badge(f"{status_emoji} {talent['status'].upper()}", variant=status_color)}
-                </div>
-                <div style="text-align: center; min-width: 100px;">
-                    <div style="font-weight: 600; color: hsl(var(--foreground));">{talent['followers']:,}</div>
-                    <div style="color: hsl(var(--muted-foreground)); font-size: 0.75rem;">Followers</div>
-                </div>
-                <div style="text-align: center; min-width: 100px;">
-                    <div style="font-weight: 600; color: hsl(var(--foreground));">💎 {talent['total_diamonds']:,}</div>
-                    <div style="color: hsl(var(--muted-foreground)); font-size: 0.75rem;">Diamonds</div>
-                </div>
-                <div style="text-align: center; min-width: 80px;">
-                    <div style="font-weight: 600; color: hsl(var(--foreground));">Lv. {talent['level']}</div>
-                    <div style="color: hsl(var(--muted-foreground)); font-size: 0.75rem;">Level</div>
-                </div>
-                <div style="text-align: center; min-width: 80px;">
-                    <div style="font-weight: 600; color: hsl(var(--foreground));">{talent.get('total_streams', 0)}</div>
-                    <div style="color: hsl(var(--muted-foreground)); font-size: 0.75rem;">Streams</div>
+            <div class="card hover-lift" style="cursor: pointer; margin-bottom: 1.5rem;">
+                <div style="padding: 1.5rem;">
+                    <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+                        {avatar(talent['avatar'], size='xl', status=talent['status'])}
+                        <div style="margin-top: 1rem; width: 100%;">
+                            <div style="font-weight: 600; font-size: 1.125rem; margin-bottom: 0.5rem;">{talent['name']}</div>
+                            <div class="text-muted" style="font-size: 0.875rem; margin-bottom: 0.75rem;">@{talent['username']}</div>
+                            <div style="margin-bottom: 1rem;">
+                                {badge(f"{status_icon} {talent['status'].upper()}", variant=status_variant)}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="separator" style="margin: 1.25rem 0;"></div>
+
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                        <div style="text-align: center;">
+                            <div class="text-muted" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Followers</div>
+                            <div style="font-weight: 700; font-size: 1.125rem; color: hsl(var(--primary));">{talent['followers']:,}</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div class="text-muted" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Diamonds</div>
+                            <div style="font-weight: 700; font-size: 1.125rem; color: hsl(var(--primary));">💎 {talent['total_diamonds']:,}</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div class="text-muted" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Level</div>
+                            <div style="font-weight: 700; font-size: 1.125rem;">Lv. {talent['level']}</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div class="text-muted" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Streams</div>
+                            <div style="font-weight: 700; font-size: 1.125rem;">{talent.get('total_streams', 0)}</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 0.75rem;">
+                        <div class="text-muted" style="font-size: 0.75rem; margin-bottom: 0.5rem;">Profile Completion</div>
+                        {progress_bar(profile_completion)}
+                        <div style="font-size: 0.75rem; margin-top: 0.25rem; text-align: right; font-weight: 600; color: hsl(var(--primary));">{profile_completion}%</div>
+                    </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-        st.markdown("""
-            </div>
+st.markdown('<div class="separator"></div>', unsafe_allow_html=True)
+
+# Edit Talent Section (Optional)
+with st.expander("✏️ Edit Talent Profile", expanded=False):
+    st.markdown("""
+    <div class="card">
+        <div class="card-header">
+            <h3 class="heading-4">Update Talent Information</h3>
+            <p class="text-muted">Select a talent to edit their profile details</p>
         </div>
-        """, unsafe_allow_html=True)
+        <div class="card-content">
+    """, unsafe_allow_html=True)
 
-        # Edit Section
-        st.markdown('<div class="separator"></div>', unsafe_allow_html=True)
-        st.markdown("""
-        <div class="card">
-            <div class="card-header">
-                <h3 class="heading-4">✏️ Edit Talent</h3>
-                <p class="text-muted">Update talent information</p>
-            </div>
-            <div class="card-content">
-        """, unsafe_allow_html=True)
+    talent_names = [t['name'] for t in dm.get_all_talents()]
+    selected_talent_name = st.selectbox("Select Talent", talent_names)
 
-        selected_talent_name = st.selectbox(
-            "Select talent to edit",
-            options=[t['name'] for t in talents],
-            key="edit_select"
-        )
+    if selected_talent_name:
+        selected_talent = next(t for t in dm.get_all_talents() if t['name'] == selected_talent_name)
 
-        if selected_talent_name:
-            talent = next(t for t in talents if t['name'] == selected_talent_name)
+        col1, col2 = st.columns(2)
 
-            with st.form("edit_talent_form"):
-                col1, col2 = st.columns(2)
+        with col1:
+            new_status = st.selectbox(
+                "Status",
+                ["online", "offline", "live"],
+                index=["online", "offline", "live"].index(selected_talent['status'])
+            )
 
-                with col1:
-                    new_name = st.text_input("Name", value=talent['name'])
-                    new_bio = st.text_area("Bio", value=talent['bio'])
-                    new_status = st.selectbox(
-                        "Status",
-                        ["online", "offline", "live"],
-                        index=["online", "offline", "live"].index(talent['status'])
-                    )
+        with col2:
+            new_level = st.number_input(
+                "Level",
+                min_value=1,
+                max_value=100,
+                value=selected_talent['level']
+            )
 
-                with col2:
-                    new_followers = st.number_input(
-                        "Followers",
-                        value=talent['followers'],
-                        min_value=0
-                    )
-                    new_level = st.number_input(
-                        "Level",
-                        value=talent['level'],
-                        min_value=1,
-                        max_value=100
-                    )
+        col3, col4 = st.columns(2)
 
-                col_a, col_b, col_c = st.columns([1, 1, 2])
-                with col_a:
-                    submit = st.form_submit_button("💾 Save Changes", use_container_width=True)
-                with col_b:
-                    cancel = st.form_submit_button("❌ Cancel", use_container_width=True)
+        with col3:
+            new_followers = st.number_input(
+                "Followers",
+                min_value=0,
+                value=selected_talent['followers']
+            )
 
-                if submit:
-                    updates = {
-                        'name': new_name,
-                        'bio': new_bio,
-                        'status': new_status,
-                        'followers': new_followers,
-                        'level': new_level
-                    }
-                    dm.update_talent(talent['id'], updates)
-                    st.success(f"✅ {new_name} updated successfully!")
-                    st.rerun()
+        with col4:
+            new_diamonds = st.number_input(
+                "Total Diamonds",
+                min_value=0,
+                value=selected_talent['total_diamonds']
+            )
 
-        st.markdown("""
-            </div>
+        col_btn1, col_btn2 = st.columns([1, 4])
+
+        with col_btn1:
+            if st.button("💾 Save Changes", use_container_width=True, type="primary"):
+                dm.update_talent(
+                    selected_talent['id'],
+                    status=new_status,
+                    level=new_level,
+                    followers=new_followers,
+                    total_diamonds=new_diamonds
+                )
+                st.success(f"✅ Updated {selected_talent_name}'s profile!")
+                st.rerun()
+
+    st.markdown("""
         </div>
-        """, unsafe_allow_html=True)
-
-    else:
-        st.markdown("""
-        <div class="alert alert-info">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <div style="font-size: 2rem;">🔍</div>
-                <div>
-                    <div style="font-weight: 600; margin-bottom: 0.25rem;">No Talents Found</div>
-                    <div style="font-size: 0.875rem;">Try adjusting your filters or search query.</div>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-else:
-    # Card View
-    if talents:
-        # Grid layout
-        cols_per_row = 3
-        for i in range(0, len(talents), cols_per_row):
-            cols = st.columns(cols_per_row)
-            for j, col in enumerate(cols):
-                if i + j < len(talents):
-                    talent = talents[i + j]
-                    with col:
-                        status_color = {
-                            "live": "error",
-                            "online": "success",
-                            "offline": "secondary"
-                        }.get(talent['status'], "secondary")
-
-                        status_emoji = {
-                            "live": "🔴",
-                            "online": "🟢",
-                            "offline": "⚫"
-                        }.get(talent['status'], "⚫")
-
-                        st.markdown(f"""
-                        <div class="card" style="text-align: center;">
-                            <div style="padding: 1.5rem;">
-                                {avatar(talent['avatar'], size='xl', status=talent['status'])}
-                                <div style="margin-top: 1rem;">
-                                    <h4 style="font-weight: 700; margin-bottom: 0.25rem;">{talent['name']}</h4>
-                                    <p style="color: hsl(var(--muted-foreground)); font-size: 0.875rem; margin-bottom: 0.75rem;">@{talent['username']}</p>
-                                    {badge(f"{status_emoji} {talent['status'].upper()}", variant=status_color)}
-                                </div>
-                                <div class="separator" style="margin: 1rem 0;"></div>
-                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; text-align: center;">
-                                    <div>
-                                        <div style="font-weight: 600; font-size: 1.1rem;">{talent['followers']:,}</div>
-                                        <div style="color: hsl(var(--muted-foreground)); font-size: 0.75rem;">Followers</div>
-                                    </div>
-                                    <div>
-                                        <div style="font-weight: 600; font-size: 1.1rem;">💎 {talent['total_diamonds']:,}</div>
-                                        <div style="color: hsl(var(--muted-foreground)); font-size: 0.75rem;">Diamonds</div>
-                                    </div>
-                                    <div>
-                                        <div style="font-weight: 600; font-size: 1.1rem;">Lv. {talent['level']}</div>
-                                        <div style="color: hsl(var(--muted-foreground)); font-size: 0.75rem;">Level</div>
-                                    </div>
-                                    <div>
-                                        <div style="font-weight: 600; font-size: 1.1rem;">{talent.get('total_streams', 0)}</div>
-                                        <div style="color: hsl(var(--muted-foreground)); font-size: 0.75rem;">Streams</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
-
-                        # Quick actions
-                        col_a, col_b = st.columns(2)
-                        with col_a:
-                            if st.button("✏️ Edit", key=f"edit_{talent['id']}", use_container_width=True):
-                                st.session_state.editing_talent = talent['id']
-                        with col_b:
-                            new_status = st.selectbox(
-                                "Status",
-                                ["online", "offline", "live"],
-                                index=["online", "offline", "live"].index(talent['status']),
-                                key=f"status_{talent['id']}",
-                                label_visibility="collapsed"
-                            )
-                            if new_status != talent['status']:
-                                dm.update_talent_status(talent['id'], new_status)
-                                st.rerun()
-
-        st.markdown("")
-    else:
-        st.markdown("""
-        <div class="alert alert-info">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <div style="font-size: 2rem;">🔍</div>
-                <div>
-                    <div style="font-weight: 600; margin-bottom: 0.25rem;">No Talents Found</div>
-                    <div style="font-size: 0.875rem;">Try adjusting your filters or search query.</div>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
 
 # Footer
 st.markdown('<div class="separator"></div>', unsafe_allow_html=True)
-st.markdown(f"""
-<div style='text-align: center; padding: 1.5rem 0; color: hsl(var(--muted-foreground));'>
-    <p style="font-size: 0.875rem;">Showing {len(talents)} of {len(dm.get_all_talents())} talents</p>
+st.markdown("""
+<div style="text-align: center; padding: 1.5rem 0; color: hsl(var(--foreground-muted));">
+    <p style="font-size: 0.875rem;">
+        Showing {0} of {1} talents • Last updated just now
+    </p>
+    <p style="font-size: 0.75rem; margin-top: 0.25rem;">Talent profiles • Performance tracking • Real-time status</p>
 </div>
-""", unsafe_allow_html=True)
+""".format(len(talents), len(dm.get_all_talents())), unsafe_allow_html=True)

@@ -1,12 +1,12 @@
 """
 📈 Analytics & Reports Page
-Professional analytics with shadcn/ui design
+Modern TalentFlow-inspired design
 """
 import streamlit as st
 import sys
 sys.path.append('..')
 from utils.data_manager import get_data_manager
-from utils.ui_components import get_shadcn_css, stat_card, badge
+from utils.ui_components import get_modern_css, stat_card, badge
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -18,23 +18,28 @@ st.set_page_config(
     layout="wide"
 )
 
-# Apply shadcn CSS
-st.markdown(get_shadcn_css(), unsafe_allow_html=True)
+# Apply modern CSS
+st.markdown(get_modern_css(), unsafe_allow_html=True)
 
 # Initialize data manager
 dm = get_data_manager()
 
 # Header
 st.markdown("""
-<div style="margin-bottom: 2rem;">
+<div style="margin-bottom: 2.5rem;">
     <h1 class="heading-1">📈 Analytics & Reports</h1>
-    <p class="text-muted" style="font-size: 1rem; margin-top: 0.5rem;">
+    <p class="text-muted" style="font-size: 1.125rem; margin-top: 0.75rem;">
         Comprehensive analytics and performance insights across all talents
     </p>
 </div>
 """, unsafe_allow_html=True)
 
-# Date range selector
+# Filter Controls
+st.markdown("""
+<div class="card" style="margin-bottom: 2rem;">
+    <div class="card-content" style="padding: 1.25rem;">
+""", unsafe_allow_html=True)
+
 col1, col2, col3 = st.columns([2, 2, 1])
 
 with col1:
@@ -51,62 +56,70 @@ with col2:
 
 with col3:
     st.markdown("###")
-    if st.button("📊 Report", use_container_width=True):
+    if st.button("📊 Generate Report", use_container_width=True):
         st.info("Full report generation feature (coming soon)")
 
-st.markdown('<div class="separator"></div>', unsafe_allow_html=True)
-
-# Key Metrics Overview
 st.markdown("""
-<div style="margin-bottom: 1.5rem;">
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# Get platform stats
+stats = dm.get_platform_stats()
+
+# KPI Cards
+st.markdown("""
+<div style="margin-bottom: 2rem;">
     <h2 class="heading-3">📊 Key Performance Indicators</h2>
     <p class="text-muted">Platform-wide metrics and performance overview</p>
 </div>
 """, unsafe_allow_html=True)
 
-stats = dm.get_platform_stats()
-
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.markdown(stat_card(
-        title="Total Revenue",
-        value=f"${stats['total_diamonds'] * 0.01:,.2f}",
-        description=f"💎 {stats['total_diamonds']:,} diamonds",
+        label="Total Revenue",
+        value=f"${stats['total_diamonds'] * 0.01:,.0f}",
+        change="+8.1%",
+        change_positive=True,
         icon="💰",
-        color="green"
+        icon_color="green"
     ), unsafe_allow_html=True)
 
 with col2:
     st.markdown(stat_card(
-        title="Total Followers",
+        label="Total Followers",
         value=f"{stats['total_followers']:,}",
-        description="Across all talents",
+        change="+12.5%",
+        change_positive=True,
         icon="👥",
-        color="blue"
+        icon_color="blue"
     ), unsafe_allow_html=True)
 
 with col3:
     st.markdown(stat_card(
-        title="Total Streams",
+        label="Total Streams",
         value=f"{stats['total_streams']:,}",
-        description="All time broadcasts",
+        change="+4.2%",
+        change_positive=True,
         icon="📺",
-        color="purple"
+        icon_color="purple"
     ), unsafe_allow_html=True)
 
 with col4:
     st.markdown(stat_card(
-        title="Avg Viewers",
+        label="Avg Viewers",
         value=f"{stats['avg_viewers_per_stream']:.0f}",
-        description="Per stream session",
+        change="+15.3%",
+        change_positive=True,
         icon="📊",
-        color="pink"
+        icon_color="orange"
     ), unsafe_allow_html=True)
 
 st.markdown('<div class="separator"></div>', unsafe_allow_html=True)
 
-# Charts Section
+# Trend Analysis
 st.markdown("""
 <div style="margin-bottom: 1.5rem;">
     <h2 class="heading-3">📈 Trend Analysis</h2>
@@ -135,7 +148,7 @@ with col1:
         y=df_growth['New Talents'],
         name='New Talents',
         mode='lines+markers',
-        line=dict(color='hsl(262, 83%, 58%)', width=3),
+        line=dict(color='hsl(250, 70%, 60%)', width=3),
         marker=dict(size=8),
         fill='tonexty',
         fillcolor='rgba(139, 92, 246, 0.1)'
@@ -145,22 +158,22 @@ with col1:
         y=df_growth['Active Talents'],
         name='Active Talents',
         mode='lines+markers',
-        line=dict(color='hsl(280, 83%, 58%)', width=3),
+        line=dict(color='hsl(270, 70%, 60%)', width=3),
         marker=dict(size=8),
         fill='tonexty',
         fillcolor='rgba(192, 132, 252, 0.1)'
     ))
 
     fig.update_layout(
-        height=350,
+        height=300,
         margin=dict(l=0, r=0, t=10, b=0),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(family='Inter, sans-serif'),
+        font=dict(family='Inter, sans-serif', color='hsl(222, 47%, 11%)'),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         hovermode='x unified',
-        xaxis=dict(showgrid=False),
-        yaxis=dict(showgrid=True, gridcolor='rgba(0,0,0,0.05)')
+        xaxis=dict(showgrid=False, showline=False),
+        yaxis=dict(showgrid=True, gridcolor='hsl(220, 13%, 91%)', showline=False)
     )
 
     st.plotly_chart(fig, use_container_width=True, key="growth_chart")
@@ -188,26 +201,26 @@ with col2:
         x=df_revenue['Month'],
         y=df_revenue['Diamonds'],
         name='Diamonds',
-        marker_color='hsl(262, 83%, 58%)'
+        marker_color='hsl(250, 70%, 60%)'
     ))
     fig.add_trace(go.Bar(
         x=df_revenue['Month'],
         y=df_revenue['Gifts'],
         name='Gifts',
-        marker_color='hsl(280, 83%, 58%)'
+        marker_color='hsl(142, 71%, 45%)'
     ))
 
     fig.update_layout(
-        height=350,
+        height=300,
         barmode='group',
         margin=dict(l=0, r=0, t=10, b=0),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(family='Inter, sans-serif'),
+        font=dict(family='Inter, sans-serif', color='hsl(222, 47%, 11%)'),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         hovermode='x unified',
-        xaxis=dict(showgrid=False),
-        yaxis=dict(showgrid=True, gridcolor='rgba(0,0,0,0.05)')
+        xaxis=dict(showgrid=False, showline=False),
+        yaxis=dict(showgrid=True, gridcolor='hsl(220, 13%, 91%)', showline=False)
     )
 
     st.plotly_chart(fig, use_container_width=True, key="revenue_chart")
@@ -253,7 +266,7 @@ with tab1:
             y=df_diamonds['Diamonds'],
             marker=dict(
                 color=df_diamonds['Level'],
-                colorscale='Purples',
+                colorscale=[[0, 'hsl(250, 70%, 80%)'], [1, 'hsl(250, 70%, 40%)']],
                 showscale=True,
                 colorbar=dict(title="Level")
             ),
@@ -266,9 +279,9 @@ with tab1:
         margin=dict(l=0, r=0, t=10, b=0),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(family='Inter, sans-serif'),
-        xaxis=dict(showgrid=False),
-        yaxis=dict(showgrid=True, gridcolor='rgba(0,0,0,0.05)')
+        font=dict(family='Inter, sans-serif', color='hsl(222, 47%, 11%)'),
+        xaxis=dict(showgrid=False, showline=False),
+        yaxis=dict(showgrid=True, gridcolor='hsl(220, 13%, 91%)', showline=False)
     )
     st.plotly_chart(fig, use_container_width=True, key="diamonds_chart")
 
@@ -303,7 +316,7 @@ with tab2:
             y=df_followers['Followers'],
             marker=dict(
                 color=df_followers['Level'],
-                colorscale='Blues',
+                colorscale=[[0, 'hsl(210, 70%, 80%)'], [1, 'hsl(210, 70%, 40%)']],
                 showscale=True,
                 colorbar=dict(title="Level")
             ),
@@ -316,9 +329,9 @@ with tab2:
         margin=dict(l=0, r=0, t=10, b=0),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(family='Inter, sans-serif'),
-        xaxis=dict(showgrid=False),
-        yaxis=dict(showgrid=True, gridcolor='rgba(0,0,0,0.05)')
+        font=dict(family='Inter, sans-serif', color='hsl(222, 47%, 11%)'),
+        xaxis=dict(showgrid=False, showline=False),
+        yaxis=dict(showgrid=True, gridcolor='hsl(220, 13%, 91%)', showline=False)
     )
     st.plotly_chart(fig, use_container_width=True, key="followers_chart")
 
@@ -353,7 +366,7 @@ with tab3:
             y=df_streams['Total Streams'],
             marker=dict(
                 color=df_streams['Avg Viewers'],
-                colorscale='Greens',
+                colorscale=[[0, 'hsl(142, 71%, 80%)'], [1, 'hsl(142, 71%, 35%)']],
                 showscale=True,
                 colorbar=dict(title="Avg Viewers")
             ),
@@ -366,9 +379,9 @@ with tab3:
         margin=dict(l=0, r=0, t=10, b=0),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(family='Inter, sans-serif'),
-        xaxis=dict(showgrid=False),
-        yaxis=dict(showgrid=True, gridcolor='rgba(0,0,0,0.05)')
+        font=dict(family='Inter, sans-serif', color='hsl(222, 47%, 11%)'),
+        xaxis=dict(showgrid=False, showline=False),
+        yaxis=dict(showgrid=True, gridcolor='hsl(220, 13%, 91%)', showline=False)
     )
     st.plotly_chart(fig, use_container_width=True, key="streams_chart")
 
@@ -381,7 +394,7 @@ with tab3:
 
 st.markdown('<div class="separator"></div>', unsafe_allow_html=True)
 
-# Status Distribution and Engagement
+# Distribution Analysis
 st.markdown("""
 <div style="margin-bottom: 1.5rem;">
     <h2 class="heading-3">📊 Distribution Analysis</h2>
@@ -417,7 +430,7 @@ with col1:
         values='Count',
         names='Status',
         color_discrete_sequence=['#EF4444', '#10B981', '#6B7280'],
-        hole=0.4
+        hole=0.5
     )
     fig.update_traces(
         textposition='inside',
@@ -428,7 +441,7 @@ with col1:
         height=300,
         margin=dict(l=0, r=0, t=10, b=0),
         paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(family='Inter, sans-serif'),
+        font=dict(family='Inter, sans-serif', color='hsl(222, 47%, 11%)'),
         showlegend=True,
         legend=dict(orientation="h", yanchor="bottom", y=-0.1, xanchor="center", x=0.5)
     )
@@ -452,7 +465,7 @@ with col2:
 
     # Calculate engagement scores
     engagement_data = []
-    for talent in talents[:5]:  # Top 5
+    for talent in talents[:5]:
         engagement_score = (
             talent['total_diamonds'] * 0.5 +
             talent['followers'] * 0.3 +
@@ -460,7 +473,7 @@ with col2:
         )
         engagement_data.append({
             'Talent': talent['name'],
-            'Engagement Score': engagement_score / 1000  # Normalize
+            'Engagement Score': engagement_score / 1000
         })
 
     df_engagement = pd.DataFrame(engagement_data)
@@ -471,7 +484,7 @@ with col2:
             y=df_engagement['Engagement Score'],
             marker=dict(
                 color=df_engagement['Engagement Score'],
-                colorscale='RdYlGn',
+                colorscale=[[0, 'hsl(0, 84%, 60%)'], [0.5, 'hsl(38, 92%, 50%)'], [1, 'hsl(142, 71%, 45%)']],
                 showscale=False
             ),
             text=df_engagement['Engagement Score'].round(1),
@@ -483,9 +496,9 @@ with col2:
         margin=dict(l=0, r=0, t=10, b=0),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(family='Inter, sans-serif'),
-        xaxis=dict(showgrid=False),
-        yaxis=dict(showgrid=True, gridcolor='rgba(0,0,0,0.05)')
+        font=dict(family='Inter, sans-serif', color='hsl(222, 47%, 11%)'),
+        xaxis=dict(showgrid=False, showline=False),
+        yaxis=dict(showgrid=True, gridcolor='hsl(220, 13%, 91%)', showline=False)
     )
 
     st.plotly_chart(fig, use_container_width=True, key="engagement_chart")
@@ -535,13 +548,12 @@ if selected_talents:
     fig = go.Figure()
 
     categories = ['Followers', 'Diamonds', 'Streams', 'Avg Viewers', 'Level']
-    colors = ['hsl(262, 83%, 58%)', 'hsl(280, 83%, 58%)', 'hsl(300, 83%, 58%)',
-              'hsl(320, 83%, 58%)', 'hsl(340, 83%, 58%)']
+    colors = ['hsl(250, 70%, 60%)', 'hsl(210, 70%, 60%)', 'hsl(142, 71%, 45%)',
+              'hsl(38, 92%, 50%)', 'hsl(0, 84%, 60%)']
 
     for idx, row in df_comparison.iterrows():
-        # Normalize values for radar chart
         values = [
-            row['Followers'] / 1000,  # Normalize
+            row['Followers'] / 1000,
             row['Diamonds'] / 100,
             row['Streams'] / 10,
             row['Avg Viewers'],
@@ -559,17 +571,17 @@ if selected_talents:
         polar=dict(
             radialaxis=dict(
                 visible=True,
-                gridcolor='rgba(0,0,0,0.1)'
+                gridcolor='hsl(220, 13%, 91%)'
             ),
             angularaxis=dict(
-                gridcolor='rgba(0,0,0,0.1)'
+                gridcolor='hsl(220, 13%, 91%)'
             )
         ),
         showlegend=True,
         height=450,
         margin=dict(l=80, r=80, t=40, b=40),
         paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(family='Inter, sans-serif'),
+        font=dict(family='Inter, sans-serif', color='hsl(222, 47%, 11%)'),
         legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5)
     )
 
@@ -582,10 +594,10 @@ if selected_talents:
 else:
     st.markdown("""
     <div class="alert alert-info">
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <div style="font-size: 2rem;">📊</div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="font-size: 2.5rem;">📊</div>
             <div>
-                <div style="font-weight: 600; margin-bottom: 0.25rem;">Select Talents to Compare</div>
+                <div style="font-weight: 600; font-size: 1.125rem; margin-bottom: 0.5rem;">Select Talents to Compare</div>
                 <div style="font-size: 0.875rem;">Choose up to 5 talents to see detailed comparison</div>
             </div>
         </div>
@@ -641,7 +653,7 @@ st.markdown("""
 # Footer
 st.markdown('<div class="separator"></div>', unsafe_allow_html=True)
 st.markdown("""
-<div style='text-align: center; padding: 1.5rem 0; color: hsl(var(--muted-foreground));'>
+<div style="text-align: center; padding: 1.5rem 0; color: hsl(var(--foreground-muted));">
     <p style="font-size: 0.875rem;">📊 Analytics powered by real-time data</p>
     <p style="font-size: 0.75rem; margin-top: 0.25rem;">All metrics updated automatically • Export capabilities available</p>
 </div>
