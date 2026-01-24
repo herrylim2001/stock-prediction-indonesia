@@ -6,7 +6,7 @@ import streamlit as st
 import sys
 sys.path.append('..')
 from utils.data_manager import get_data_manager
-from utils.ui_components import get_modern_css, badge, avatar, stat_card, progress_bar
+from utils.ui_components import get_modern_css, badge, avatar, stat_card, progress_bar, sidebar_menu
 import pandas as pd
 
 # Page config
@@ -18,6 +18,10 @@ st.set_page_config(
 
 # Apply modern CSS
 st.markdown(get_modern_css(), unsafe_allow_html=True)
+
+# Sidebar Menu
+with st.sidebar:
+    st.markdown(sidebar_menu(active_page="Talent_Management"), unsafe_allow_html=True)
 
 # Initialize data manager
 dm = get_data_manager()

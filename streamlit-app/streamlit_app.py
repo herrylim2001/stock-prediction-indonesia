@@ -6,7 +6,7 @@ import streamlit as st
 import sys
 sys.path.append('.')
 from utils.data_manager import get_data_manager
-from utils.ui_components import get_modern_css, stat_card, badge, avatar, hero_section
+from utils.ui_components import get_modern_css, stat_card, badge, avatar, hero_section, sidebar_menu
 import plotly.graph_objects as go
 
 # Page config
@@ -19,6 +19,10 @@ st.set_page_config(
 
 # Apply modern CSS
 st.markdown(get_modern_css(), unsafe_allow_html=True)
+
+# Sidebar Menu
+with st.sidebar:
+    st.markdown(sidebar_menu(active_page="Dashboard"), unsafe_allow_html=True)
 
 # Initialize data manager
 dm = get_data_manager()

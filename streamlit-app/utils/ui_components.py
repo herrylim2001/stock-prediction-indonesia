@@ -87,6 +87,156 @@ def get_modern_css():
     }
 
     /* ============================
+       TalentFlow Sidebar Styling
+       ============================ */
+
+    /* Sidebar Container */
+    [data-testid="stSidebar"] {
+        background: hsl(var(--surface)) !important;
+        border-right: 1px solid hsl(var(--border)) !important;
+        box-shadow: var(--shadow-sm);
+    }
+
+    [data-testid="stSidebar"] > div:first-child {
+        background: hsl(var(--surface)) !important;
+        padding: 1.5rem 1rem;
+    }
+
+    /* Sidebar Logo/Branding */
+    .sidebar-logo {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 0.75rem;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid hsl(var(--border));
+    }
+
+    .sidebar-logo-icon {
+        width: 2.5rem;
+        height: 2.5rem;
+        background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(270 70% 60%) 100%);
+        border-radius: var(--radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+
+    .sidebar-logo-text {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-weight: 700;
+        font-size: 1.25rem;
+        background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(270 70% 60%) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    /* Sidebar Menu Items */
+    .sidebar-menu {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .sidebar-menu-section {
+        margin-bottom: 2rem;
+    }
+
+    .sidebar-menu-label {
+        color: hsl(var(--foreground-muted));
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0 0.75rem;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .sidebar-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 0.875rem;
+        margin: 0.25rem 0;
+        border-radius: var(--radius);
+        color: hsl(var(--foreground));
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        text-decoration: none;
+        position: relative;
+    }
+
+    .sidebar-menu-item:hover {
+        background: hsl(var(--surface-hover));
+        color: hsl(var(--primary));
+        transform: translateX(4px);
+    }
+
+    .sidebar-menu-item.active {
+        background: linear-gradient(135deg, hsl(var(--primary) / 0.1) 0%, hsl(270 70% 60% / 0.1) 100%);
+        color: hsl(var(--primary));
+        font-weight: 600;
+        border-left: 3px solid hsl(var(--primary));
+        padding-left: calc(0.875rem - 3px);
+    }
+
+    .sidebar-menu-item.active::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 3px;
+        height: 60%;
+        background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(270 70% 60%) 100%);
+        border-radius: 0 2px 2px 0;
+    }
+
+    .sidebar-menu-icon {
+        font-size: 1.125rem;
+        width: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .sidebar-menu-badge {
+        margin-left: auto;
+        background: hsl(var(--error));
+        color: white;
+        font-size: 0.625rem;
+        font-weight: 700;
+        padding: 0.125rem 0.5rem;
+        border-radius: 9999px;
+        min-width: 1.25rem;
+        text-align: center;
+    }
+
+    .sidebar-menu-item.logout {
+        color: hsl(var(--error));
+    }
+
+    .sidebar-menu-item.logout:hover {
+        background: hsl(var(--error-light));
+        color: hsl(var(--error));
+    }
+
+    /* Sidebar Footer */
+    .sidebar-footer {
+        padding: 1rem 0.75rem;
+        margin-top: auto;
+        border-top: 1px solid hsl(var(--border));
+        font-size: 0.75rem;
+        color: hsl(var(--foreground-muted));
+        text-align: center;
+    }
+
+    /* ============================
        Typography
        ============================ */
 
@@ -720,14 +870,7 @@ def stat_card(label, value, change=None, change_positive=True, icon="📊", icon
         arrow = "↗" if change_positive else "↘"
         change_html = f'<div class="stat-card-change {change_class}">{arrow} {change}</div>'
 
-    return f"""
-    <div class="stat-card hover-lift">
-        <div class="stat-card-icon {icon_color}">{icon}</div>
-        <div class="stat-card-label">{label}</div>
-        <div class="stat-card-value">{value}</div>
-        {change_html}
-    </div>
-    """
+    return f'<div class="stat-card hover-lift"><div class="stat-card-icon {icon_color}">{icon}</div><div class="stat-card-label">{label}</div><div class="stat-card-value">{value}</div>{change_html}</div>'
 
 def badge(text, variant="default"):
     """Create a badge"""
@@ -741,11 +884,7 @@ def avatar(image_url, size="md", status=None):
 
 def progress_bar(percentage, color="primary"):
     """Create a progress bar"""
-    return f"""
-    <div class="progress">
-        <div class="progress-bar" style="width: {percentage}%;"></div>
-    </div>
-    """
+    return f'<div class="progress"><div class="progress-bar" style="width: {percentage}%;"></div></div>'
 
 def hero_section(title, subtitle, button_text=None, button_url=None):
     """Create a glassmorphic hero section"""
@@ -753,10 +892,33 @@ def hero_section(title, subtitle, button_text=None, button_url=None):
     if button_text:
         button_html = f'<button class="btn" onclick="window.location.href=\'{button_url}\'">{button_text}</button>'
 
-    return f"""
-    <div class="hero-glass fade-in">
-        <h1>{title}</h1>
-        <p>{subtitle}</p>
-        {button_html}
-    </div>
-    """
+    return f'<div class="hero-glass fade-in"><h1>{title}</h1><p>{subtitle}</p>{button_html}</div>'
+
+def sidebar_menu(active_page="Dashboard"):
+    """Create TalentFlow-style sidebar menu"""
+    menu_items = {
+        "Main": [
+            {"label": "Dashboard", "icon": "📊", "page": "Dashboard", "badge": None},
+            {"label": "Talents", "icon": "👥", "page": "Talent_Management", "badge": None},
+            {"label": "Livestreams", "icon": "📺", "page": "Livestreams", "badge": None},
+            {"label": "Analytics", "icon": "📈", "page": "Analytics", "badge": None},
+        ],
+        "System": [
+            {"label": "Settings", "icon": "⚙️", "page": "Settings", "badge": None},
+        ]
+    }
+
+    html = '<div class="sidebar-logo"><div class="sidebar-logo-icon">🎭</div><div class="sidebar-logo-text">LiveStream</div></div>'
+
+    for section, items in menu_items.items():
+        html += f'<div class="sidebar-menu-section"><span class="sidebar-menu-label">{section}</span><div class="sidebar-menu">'
+
+        for item in items:
+            active_class = "active" if active_page == item["page"] else ""
+            badge_html = f'<span class="sidebar-menu-badge">{item["badge"]}</span>' if item["badge"] else ""
+
+            html += f'<div class="sidebar-menu-item {active_class}"><span class="sidebar-menu-icon">{item["icon"]}</span><span>{item["label"]}</span>{badge_html}</div>'
+
+        html += '</div></div>'
+
+    return html
