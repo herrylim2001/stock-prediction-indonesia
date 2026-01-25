@@ -78,6 +78,17 @@ This is a comprehensive design specification for a B2B SaaS whitelabel live stre
 - 48 prioritized features
 """)
 
+st.sidebar.markdown("---")
+st.sidebar.success("""
+**Full Implementation Available!**
+
+This design has been fully implemented with:
+- **Backend**: Go + Gin + PostgreSQL
+- **Frontend**: Next.js + TypeScript + Tailwind
+
+[View Source Code](https://github.com/herrylim2001/stock-prediction-indonesia)
+""")
+
 # Load and display the markdown content
 @st.cache_data
 def load_markdown():
