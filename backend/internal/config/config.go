@@ -9,11 +9,13 @@ import (
 
 type Config struct {
 	// Server
-	ServerPort string
-	ServerHost string
+	ServerPort  string
+	ServerHost  string
 	Environment string
 
 	// Database
+	DBType     string // "sqlite" or "postgres"
+	SQLitePath string
 	DBHost     string
 	DBPort     string
 	DBUser     string
@@ -22,7 +24,7 @@ type Config struct {
 	DBSSLMode  string
 
 	// JWT
-	JWTSecret     string
+	JWTSecret      string
 	JWTExpireHours int
 
 	// CORS
@@ -41,7 +43,9 @@ func Load() *Config {
 		ServerHost:  getEnv("SERVER_HOST", "0.0.0.0"),
 		Environment: getEnv("ENVIRONMENT", "development"),
 
-		// Database
+		// Database - default to SQLite for easy local development
+		DBType:     getEnv("DB_TYPE", "sqlite"),
+		SQLitePath: getEnv("SQLITE_PATH", "whitelabel.db"),
 		DBHost:     getEnv("DB_HOST", "localhost"),
 		DBPort:     getEnv("DB_PORT", "5432"),
 		DBUser:     getEnv("DB_USER", "postgres"),
@@ -50,7 +54,7 @@ func Load() *Config {
 		DBSSLMode:  getEnv("DB_SSL_MODE", "disable"),
 
 		// JWT
-		JWTSecret:     getEnv("JWT_SECRET", "your-super-secret-key-change-in-production"),
+		JWTSecret:      getEnv("JWT_SECRET", "your-super-secret-key-change-in-production"),
 		JWTExpireHours: expireHours,
 
 		// CORS
