@@ -1,0 +1,40 @@
+version: '3.8'
+
+# Development-only docker-compose
+# Use: docker-compose -f docker-compose.dev.yml up
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: streaming_db_dev
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: whitelabel_streaming
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: streaming_redis_dev
+    ports:
+      - "6379:6379"
+
+  # pgAdmin (optional - database management UI)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: streaming_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data_dev:
