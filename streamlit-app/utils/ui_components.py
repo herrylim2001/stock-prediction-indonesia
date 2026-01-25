@@ -200,6 +200,15 @@ def get_modern_css():
     header {visibility: hidden;}
     .stDeployButton {display: none;}
 
+    /* Hide default Streamlit sidebar navigation */
+    [data-testid="stSidebarNav"] {
+        display: none;
+    }
+
+    section[data-testid="stSidebar"] > div:first-child > div:first-child {
+        padding-top: 0 !important;
+    }
+
     /* Streamlit container adjustments */
     .main .block-container {
         padding-top: var(--space-8);
@@ -1176,30 +1185,91 @@ def hero_section(title, subtitle, button_text=None, button_url=None):
     return f'<div class="hero-glass fade-in"><h1>{title}</h1><p>{subtitle}</p>{button_html}</div>'
 
 def sidebar_menu(active_page="Dashboard"):
-    """Create TalentFlow-inspired sidebar menu"""
-    menu_items = {
-        "Main": [
-            {"label": "Dashboard", "icon": "📊", "page": "Dashboard", "badge": None},
-            {"label": "Talents", "icon": "👥", "page": "Talent_Management", "badge": None},
-            {"label": "Livestreams", "icon": "📺", "page": "Livestreams", "badge": None},
-            {"label": "Analytics", "icon": "📈", "page": "Analytics", "badge": None},
-        ],
-        "System": [
-            {"label": "Settings", "icon": "⚙️", "page": "Settings", "badge": None},
-        ]
+    """Create TalentFlow-inspired sidebar menu with functional navigation"""
+    import streamlit as st
+
+    # Logo
+    st.markdown("""
+    <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">🎭</div>
+        <div class="sidebar-logo-text">LiveStream</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Main Menu Section
+    st.markdown('<div class="sidebar-menu-section"><span class="sidebar-menu-label">MAIN</span></div>', unsafe_allow_html=True)
+
+    # Dashboard
+    if st.button("📊  Dashboard", key="nav_dashboard", use_container_width=True,
+                 type="primary" if active_page == "Dashboard" else "secondary"):
+        st.switch_page("streamlit_app.py")
+
+    # Talents
+    if st.button("👥  Talents", key="nav_talents", use_container_width=True,
+                 type="primary" if active_page == "Talent_Management" else "secondary"):
+        st.switch_page("pages/1_👥_Talent_Management.py")
+
+    # Livestreams
+    if st.button("📺  Livestreams", key="nav_livestreams", use_container_width=True,
+                 type="primary" if active_page == "Livestreams" else "secondary"):
+        st.switch_page("pages/2_📺_Livestreams.py")
+
+    # Analytics
+    if st.button("📈  Analytics", key="nav_analytics", use_container_width=True,
+                 type="primary" if active_page == "Analytics" else "secondary"):
+        st.switch_page("pages/3_📈_Analytics.py")
+
+    # Separator
+    st.markdown('<div class="separator"></div>', unsafe_allow_html=True)
+
+    # System Menu Section
+    st.markdown('<div class="sidebar-menu-section"><span class="sidebar-menu-label">SYSTEM</span></div>', unsafe_allow_html=True)
+
+    # Settings (placeholder)
+    if st.button("⚙️  Settings", key="nav_settings", use_container_width=True, type="secondary"):
+        st.info("Settings page (coming soon)")
+
+    # Add custom CSS for navigation buttons
+    st.markdown("""
+    <style>
+    /* Style navigation buttons to match TalentFlow design */
+    [data-testid="stSidebar"] button {
+        border-radius: var(--radius-md) !important;
+        font-size: var(--font-size-sm) !important;
+        font-weight: 500 !important;
+        padding: var(--space-3) var(--space-4) !important;
+        margin: var(--space-1) 0 !important;
+        text-align: left !important;
+        justify-content: flex-start !important;
+        transition: all var(--duration-fast) var(--ease-out) !important;
     }
 
-    html = '<div class="sidebar-logo"><div class="sidebar-logo-icon">🎭</div><div class="sidebar-logo-text">LiveStream</div></div>'
+    [data-testid="stSidebar"] button[kind="secondary"] {
+        background: transparent !important;
+        color: hsl(var(--text-secondary)) !important;
+        border: none !important;
+    }
 
-    for section, items in menu_items.items():
-        html += f'<div class="sidebar-menu-section"><span class="sidebar-menu-label">{section}</span><div class="sidebar-menu">'
+    [data-testid="stSidebar"] button[kind="secondary"]:hover {
+        background: hsl(var(--neutral-100)) !important;
+        color: hsl(var(--primary-600)) !important;
+        transform: translateX(4px) !important;
+    }
 
-        for item in items:
-            active_class = "active" if active_page == item["page"] else ""
-            badge_html = f'<span class="sidebar-menu-badge">{item["badge"]}</span>' if item["badge"] else ""
+    [data-testid="stSidebar"] button[kind="primary"] {
+        background: linear-gradient(135deg,
+            hsl(var(--primary-500) / 0.1) 0%,
+            hsl(270 70% 60% / 0.08) 100%) !important;
+        color: hsl(var(--primary-600)) !important;
+        font-weight: 700 !important;
+        border-left: 3px solid hsl(var(--primary-500)) !important;
+        padding-left: calc(var(--space-4) - 3px) !important;
+        box-shadow: var(--shadow-xs) !important;
+        border-radius: var(--radius-md) !important;
+    }
 
-            html += f'<div class="sidebar-menu-item {active_class}"><span class="sidebar-menu-icon">{item["icon"]}</span><span>{item["label"]}</span>{badge_html}</div>'
-
-        html += '</div></div>'
-
-    return html
+    [data-testid="stSidebar"] button p {
+        font-size: var(--font-size-sm) !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)

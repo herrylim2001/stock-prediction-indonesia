@@ -19,9 +19,9 @@ st.set_page_config(
 # Apply modern CSS
 st.markdown(get_modern_css(), unsafe_allow_html=True)
 
-# Sidebar Menu
+# Sidebar Menu (functional navigation)
 with st.sidebar:
-    st.markdown(sidebar_menu(active_page="Talent_Management"), unsafe_allow_html=True)
+    sidebar_menu(active_page="Talent_Management")
 
 # Initialize data manager
 dm = get_data_manager()
